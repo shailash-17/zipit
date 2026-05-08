@@ -19,10 +19,12 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Depends, Request, UploadFile, File, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from authlib.integrations.starlette_client import OAuth
+from starlette.middleware.sessions import SessionMiddleware
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text, JSON, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
@@ -85,6 +87,27 @@ Base.metadata.create_all(bind=engine)
 # FastAPI app
 app = FastAPI(title="ZipIt MLOps Platform", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(SessionMiddleware, secret_key="zipit-session-secret")
+
+# OAuth setup
+oauth = OAuth()
+oauth.register(
+    name='google',
+    client_id=os.getenv('GOOGLE_CLIENT_ID', 'your-google-client-id'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET', 'your-google-client-secret'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid_configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
+
+oauth.register(
+    name='github',
+    client_id=os.getenv('GITHUB_CLIENT_ID', 'your-github-client-id'),
+    client_secret=os.getenv('GITHUB_CLIENT_SECRET', 'your-github-client-secret'),
+    access_token_url='https://github.com/login/oauth/access_token',
+    authorize_url='https://github.com/login/oauth/authorize',
+    api_base_url='https://api.github.com/',
+    client_kwargs={'scope': 'user:email'}
+)
 
 # Static files
 static_dir = Path("static")
@@ -215,18 +238,55 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
         "user_info": {"username": db_user.username, "subscription_tier": db_user.subscription_tier}
     }
 
-@app.post("/api/users/login")
-async def login_user(user: UserLogin, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.username == user.username).first()
-    if not db_user or db_user.hashed_password != hash_password(user.password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+@app.get("/auth/{provider}")
+async def oauth_login(provider: str, request: Request):
+    if provider not in ['google', 'github']:
+        raise HTTPException(status_code=400, detail="Invalid provider")
     
-    access_token = create_access_token(data={"sub": str(db_user.id)})
-    return {
-        "access_token": access_token,
-        "api_key": db_user.api_key,
-        "user_info": {"username": db_user.username, "subscription_tier": db_user.subscription_tier}
-    }
+    client = oauth.create_client(provider)
+    redirect_uri = request.url_for('oauth_callback', provider=provider)
+    return await client.authorize_redirect(request, redirect_uri)
+
+@app.get("/auth/{provider}/callback")
+async def oauth_callback(provider: str, request: Request, db: Session = Depends(get_db)):
+    if provider not in ['google', 'github']:
+        raise HTTPException(status_code=400, detail="Invalid provider")
+    
+    client = oauth.create_client(provider)
+    token = await client.authorize_access_token(request)
+    
+    if provider == 'google':
+        user_info = token.get('userinfo')
+        email = user_info.get('email')
+        name = user_info.get('name')
+        username = email.split('@')[0]
+    else:  # github
+        user_resp = await client.get('user', token=token)
+        user_info = user_resp.json()
+        email = user_info.get('email')
+        name = user_info.get('name') or user_info.get('login')
+        username = user_info.get('login')
+    
+    # Find or create user
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = User(
+            username=username,
+            email=email,
+            full_name=name,
+            hashed_password="oauth_user",
+            api_key=generate_api_key()
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    access_token = create_access_token(data={"sub": str(user.id)})
+    
+    # Redirect to dashboard with token
+    response = RedirectResponse(url='/dashboard')
+    response.set_cookie(key="access_token", value=access_token, httponly=True)
+    return response
 
 @app.post("/api/models/register")
 async def register_model(model: ModelCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

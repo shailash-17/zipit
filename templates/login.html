@@ -1,495 +1,168 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZipIt MLOps Platform</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>ZipIt MLOps - Login</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0a0a0a;
-            color: #ffffff;
-            overflow-x: hidden;
-        }
-        
-        .container {
-            min-height: 100vh;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-        }
-        
-        .left-panel {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-            padding: 4rem;
-            position: relative;
-            overflow: hidden;
+            justify-content: center;
+            margin: 0;
         }
-        
-        .left-panel::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            opacity: 0.3;
-        }
-        
-        .brand {
-            position: relative;
-            z-index: 2;
+        .login-container {
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
             text-align: center;
-            margin-bottom: 3rem;
         }
-        
-        .brand h1 {
-            font-size: 4rem;
+        .logo {
+            font-size: 3rem;
             font-weight: 800;
             margin-bottom: 1rem;
-            background: linear-gradient(45deg, #fff, #f0f0f0);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        
-        .brand p {
-            font-size: 1.5rem;
-            opacity: 0.9;
-            margin-bottom: 2rem;
-        }
-        
-        .features {
-            position: relative;
-            z-index: 2;
-            max-width: 400px;
-        }
-        
-        .feature {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            font-size: 1.1rem;
-        }
-        
-        .feature i {
-            margin-right: 1rem;
-            font-size: 1.5rem;
-            color: #10b981;
-        }
-        
-        .right-panel {
-            background: #111111;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 4rem;
-        }
-        
-        .auth-container {
-            width: 100%;
-            max-width: 400px;
-        }
-        
-        .auth-header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-        
-        .auth-header h2 {
-            font-size: 2.5rem;
+        h1 {
+            color: #333;
             margin-bottom: 0.5rem;
-            color: #ffffff;
+            font-size: 2rem;
         }
-        
-        .auth-header p {
-            color: #888;
-            font-size: 1.1rem;
-        }
-        
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #ccc;
-            font-weight: 500;
-        }
-        
-        .input-wrapper {
-            position: relative;
-        }
-        
-        .input-wrapper i {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
+        .subtitle {
             color: #666;
+            margin-bottom: 3rem;
+            font-size: 1.1rem;
         }
-        
-        input {
-            width: 100%;
-            padding: 1rem 1rem 1rem 3rem;
-            background: #1a1a1a;
-            border: 2px solid #333;
-            border-radius: 12px;
-            color: #fff;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-        
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-            background: #222;
-        }
-        
-        .btn {
+        .oauth-btn {
             width: 100%;
             padding: 1rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            margin-bottom: 1rem;
             border: none;
             border-radius: 12px;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin-bottom: 1.5rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
         }
-        
-        .btn:hover {
+        .google-btn {
+            background: #4285f4;
+            color: white;
+        }
+        .google-btn:hover {
+            background: #357ae8;
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }
-        
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
+        .github-btn {
+            background: #333;
+            color: white;
         }
-        
-        .toggle-auth {
+        .github-btn:hover {
+            background: #24292e;
+            transform: translateY(-2px);
+        }
+        .divider {
+            margin: 2rem 0;
+            position: relative;
             text-align: center;
-            color: #888;
+            color: #666;
         }
-        
-        .toggle-auth a {
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #ddd;
+        }
+        .divider span {
+            background: white;
+            padding: 0 1rem;
+        }
+        .features {
+            margin-top: 2rem;
+            text-align: left;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .feature-item::before {
+            content: "✓";
+            color: #10b981;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        .manual-login {
+            margin-top: 1rem;
+        }
+        .manual-login a {
             color: #667eea;
             text-decoration: none;
-            font-weight: 600;
+            font-size: 0.9rem;
         }
-        
-        .toggle-auth a:hover {
+        .manual-login a:hover {
             text-decoration: underline;
-        }
-        
-        .alert {
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            display: none;
-        }
-        
-        .alert-success {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid #10b981;
-            color: #10b981;
-        }
-        
-        .alert-error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid #ef4444;
-            color: #ef4444;
-        }
-        
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        @media (max-width: 768px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-            
-            .left-panel {
-                display: none;
-            }
-            
-            .right-panel {
-                padding: 2rem;
-            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="left-panel">
-            <div class="brand">
-                <h1>ZipIt</h1>
-                <p>Enterprise MLOps Platform</p>
-            </div>
-            
-            <div class="features">
-                <div class="feature">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Real-time Model Monitoring</span>
-                </div>
-                <div class="feature">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>Advanced Drift Detection</span>
-                </div>
-                <div class="feature">
-                    <i class="fas fa-code"></i>
-                    <span>Integrated Development Environment</span>
-                </div>
-                <div class="feature">
-                    <i class="fas fa-robot"></i>
-                    <span>AI-Powered Assistant</span>
-                </div>
-                <div class="feature">
-                    <i class="fas fa-cloud"></i>
-                    <span>Multi-Cloud Deployment</span>
-                </div>
-            </div>
+    <div class="login-container">
+        <div class="logo">ZipIt</div>
+        <h1>MLOps Platform</h1>
+        <p class="subtitle">Monitor any ML model in production</p>
+        
+        <a href="/auth/google" class="oauth-btn google-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Continue with Google
+        </a>
+        
+        <a href="/auth/github" class="oauth-btn github-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            Continue with GitHub
+        </a>
+        
+        <div class="divider">
+            <span>or</span>
         </div>
         
-        <div class="right-panel">
-            <div class="auth-container">
-                <div class="auth-header">
-                    <h2 id="auth-title">Welcome Back</h2>
-                    <p id="auth-subtitle">Sign in to your account</p>
-                </div>
-                
-                <div id="alert" class="alert"></div>
-                
-                <!-- Login Form -->
-                <form id="login-form">
-                    <div class="form-group">
-                        <label>Username</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-user"></i>
-                            <input type="text" name="username" required>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Password</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-lock"></i>
-                            <input type="password" name="password" required>
-                        </div>
-                    </div>
-                    
-                    <button type="submit" class="btn" id="login-btn">
-                        Sign In
-                    </button>
-                </form>
-                
-                <!-- Register Form -->
-                <form id="register-form" style="display: none;">
-                    <div class="form-group">
-                        <label>Username</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-user"></i>
-                            <input type="text" name="username" required>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Email</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-envelope"></i>
-                            <input type="email" name="email" required>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Full Name</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-id-card"></i>
-                            <input type="text" name="full_name" required>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Password</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-lock"></i>
-                            <input type="password" name="password" required>
-                        </div>
-                    </div>
-                    
-                    <button type="submit" class="btn" id="register-btn">
-                        Create Account
-                    </button>
-                </form>
-                
-                <div class="toggle-auth">
-                    <span id="toggle-text">Don't have an account?</span>
-                    <a href="#" id="toggle-link">Sign up</a>
-                </div>
-            </div>
+        <div class="manual-login">
+            <a href="/manual-login">Use email and password instead</a>
+        </div>
+        
+        <div class="features">
+            <div class="feature-item">Free forever - No usage limits</div>
+            <div class="feature-item">Any ML framework supported</div>
+            <div class="feature-item">Real-time drift detection</div>
+            <div class="feature-item">Professional dashboards</div>
         </div>
     </div>
 
     <script>
-        const API_BASE = '/api';
-        let isLoginMode = true;
-        
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
-        const authTitle = document.getElementById('auth-title');
-        const authSubtitle = document.getElementById('auth-subtitle');
-        const toggleText = document.getElementById('toggle-text');
-        const toggleLink = document.getElementById('toggle-link');
-        const alert = document.getElementById('alert');
-        
-        function showAlert(message, type) {
-            alert.textContent = message;
-            alert.className = `alert alert-${type}`;
-            alert.style.display = 'block';
-            
-            setTimeout(() => {
-                alert.style.display = 'none';
-            }, 5000);
-        }
-        
-        function setLoading(button, loading) {
-            if (loading) {
-                button.innerHTML = '<span class="loading"></span> Processing...';
-                button.disabled = true;
-            } else {
-                button.innerHTML = isLoginMode ? 'Sign In' : 'Create Account';
-                button.disabled = false;
-            }
-        }
-        
-        function toggleAuthMode() {
-            isLoginMode = !isLoginMode;
-            
-            if (isLoginMode) {
-                loginForm.style.display = 'block';
-                registerForm.style.display = 'none';
-                authTitle.textContent = 'Welcome Back';
-                authSubtitle.textContent = 'Sign in to your account';
-                toggleText.textContent = "Don't have an account?";
-                toggleLink.textContent = 'Sign up';
-            } else {
-                loginForm.style.display = 'none';
-                registerForm.style.display = 'block';
-                authTitle.textContent = 'Create Account';
-                authSubtitle.textContent = 'Join the MLOps revolution';
-                toggleText.textContent = 'Already have an account?';
-                toggleLink.textContent = 'Sign in';
-            }
-        }
-        
-        toggleLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            toggleAuthMode();
-        });
-        
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const button = document.getElementById('login-btn');
-            setLoading(button, true);
-            
-            const formData = new FormData(e.target);
-            const data = {
-                username: formData.get('username'),
-                password: formData.get('password')
-            };
-            
-            try {
-                const response = await fetch(`${API_BASE}/users/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    localStorage.setItem('zipit_token', result.access_token);
-                    localStorage.setItem('zipit_user', JSON.stringify(result.user_info));
-                    showAlert('Login successful! Redirecting...', 'success');
-                    
-                    setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 1500);
-                } else {
-                    showAlert(result.detail || 'Login failed', 'error');
-                }
-            } catch (error) {
-                showAlert('Connection error. Please try again.', 'error');
-            } finally {
-                setLoading(button, false);
-            }
-        });
-        
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const button = document.getElementById('register-btn');
-            setLoading(button, true);
-            
-            const formData = new FormData(e.target);
-            const data = {
-                username: formData.get('username'),
-                email: formData.get('email'),
-                full_name: formData.get('full_name'),
-                password: formData.get('password')
-            };
-            
-            try {
-                const response = await fetch(`${API_BASE}/users/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    localStorage.setItem('zipit_token', result.access_token);
-                    showAlert('Account created successfully! Redirecting...', 'success');
-                    
-                    setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 1500);
-                } else {
-                    showAlert(result.detail || 'Registration failed', 'error');
-                }
-            } catch (error) {
-                showAlert('Connection error. Please try again.', 'error');
-            } finally {
-                setLoading(button, false);
-            }
-        });
-        
         // Check if already logged in
-        if (localStorage.getItem('zipit_token')) {
+        if (localStorage.getItem('zipit_token') || document.cookie.includes('access_token')) {
             window.location.href = '/dashboard';
         }
     </script>
