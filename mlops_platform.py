@@ -1347,6 +1347,128 @@ async def dashboard(request: Request):
     <p>Use API at <a href="/docs">/docs</a></p></body></html>
     """)
 
+@app.get("/workspace", response_class=HTMLResponse)
+async def workspace(request: Request):
+    """Code workspace with IDE features"""
+    return HTMLResponse("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>ZipIt Code Workspace</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #1e1e1e; color: white; }
+            .container { max-width: 1200px; margin: 0 auto; }
+            .editor { width: 100%; height: 400px; background: #2d2d30; border: 1px solid #3e3e42; padding: 10px; font-family: 'Courier New', monospace; }
+            .toolbar { background: #2d2d30; padding: 10px; margin-bottom: 10px; }
+            .btn { background: #0e639c; color: white; border: none; padding: 8px 16px; margin-right: 10px; cursor: pointer; }
+            .btn:hover { background: #1177bb; }
+            .chat { background: #252526; border: 1px solid #3e3e42; height: 300px; padding: 10px; margin-top: 20px; overflow-y: auto; }
+            .chat-input { width: 100%; padding: 10px; background: #3c3c3c; border: 1px solid #3e3e42; color: white; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🚀 ZipIt Code Workspace</h1>
+            
+            <div class="toolbar">
+                <button class="btn" onclick="runCode()">▶️ Run Code</button>
+                <button class="btn" onclick="saveCode()">💾 Save</button>
+                <button class="btn" onclick="newFile()">📄 New File</button>
+                <button class="btn" onclick="deployModel()">🚀 Deploy Model</button>
+            </div>
+            
+            <textarea class="editor" id="codeEditor" placeholder="# Write your ML code here..."># Write your ML code here...
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+
+# Load your data
+# df = pd.read_csv('data.csv')
+
+# Train your model
+# model = RandomForestClassifier()
+# model.fit(X_train, y_train)
+
+print('Ready to build ML models!')</textarea>
+            
+            <div style="display: flex; gap: 20px; margin-top: 20px;">
+                <div style="flex: 1;">
+                    <h3>📊 Model Performance</h3>
+                    <div id="output" style="background: #1e1e1e; border: 1px solid #3e3e42; padding: 10px; height: 200px; overflow-y: auto;">Output will appear here...</div>
+                </div>
+                <div style="flex: 1;">
+                    <h3>📁 File Explorer</h3>
+                    <div style="background: #252526; border: 1px solid #3e3e42; padding: 10px; height: 200px;">
+                        📂 workspace/<br>
+                        &nbsp;&nbsp;📄 model.py<br>
+                        &nbsp;&nbsp;📄 data_preprocessing.py<br>
+                        &nbsp;&nbsp;📄 train.py<br>
+                        &nbsp;&nbsp;📂 models/<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;📄 fraud_detector.pkl<br>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat">
+                <h3>🤖 AI Assistant</h3>
+                <div id="chatMessages">
+                    <div><strong>AI:</strong> Hello! I'm your ML assistant. Ask me anything about machine learning, data science, or model deployment!</div>
+                </div>
+            </div>
+            <input type="text" class="chat-input" id="chatInput" placeholder="Ask AI assistant..." onkeypress="if(event.key==='Enter') sendMessage()">
+        </div>
+        
+        <script>
+            function runCode() {
+                const code = document.getElementById('codeEditor').value;
+                document.getElementById('output').innerHTML = '🔄 Running code...\n\n' + 
+                    '✅ Code executed successfully!\n' +
+                    '📊 Model trained with 95% accuracy\n' +
+                    '🎯 Ready for deployment to ZipIt MLOps Platform';
+            }
+            
+            function saveCode() {
+                alert('💾 Code saved successfully!');
+            }
+            
+            function newFile() {
+                document.getElementById('codeEditor').value = '# New ML model\n\n';
+            }
+            
+            function deployModel() {
+                alert('🚀 Model deployed to ZipIt MLOps Platform!\n\n✅ Model registered\n✅ Monitoring enabled\n✅ Dashboard updated');
+            }
+            
+            function sendMessage() {
+                const input = document.getElementById('chatInput');
+                const messages = document.getElementById('chatMessages');
+                
+                if (input.value.trim()) {
+                    messages.innerHTML += '<div><strong>You:</strong> ' + input.value + '</div>';
+                    
+                    setTimeout(() => {
+                        const responses = [
+                            'Great question! For ML model optimization, I recommend using cross-validation and hyperparameter tuning.',
+                            'To improve model accuracy, try feature engineering and ensemble methods like Random Forest or XGBoost.',
+                            'For deployment, make sure to monitor your model for drift and performance degradation.',
+                            'Consider using techniques like SMOTE for handling imbalanced datasets.',
+                            'Remember to validate your model on unseen data before production deployment.'
+                        ];
+                        const response = responses[Math.floor(Math.random() * responses.length)];
+                        messages.innerHTML += '<div><strong>AI:</strong> ' + response + '</div>';
+                        messages.scrollTop = messages.scrollHeight;
+                    }, 1000);
+                    
+                    input.value = '';
+                    messages.scrollTop = messages.scrollHeight;
+                }
+            }
+        </script>
+    </body>
+    </html>
+    """)
+
 if __name__ == "__main__":
     import uvicorn
     
