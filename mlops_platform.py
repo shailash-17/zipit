@@ -14,6 +14,7 @@ import json
 import pickle
 import joblib
 import smtplib
+import stripe
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
@@ -112,7 +113,8 @@ oauth.register(
     client_kwargs={'scope': 'user:email'}
 )
 
-# Static files
+# Security
+security = HTTPBearer()
 static_dir = Path("static")
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -121,8 +123,16 @@ templates_dir = Path("templates")
 if templates_dir.exists():
     templates = Jinja2Templates(directory="templates")
 
-# Security
-security = HTTPBearer()
+# Stripe configuration
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
+
+# Subscription plans
+SUBSCRIPTION_PLANS = {
+    "free-tier": {"price": 0, "models": 3, "predictions": 1000, "features": ["basic_monitoring"]},
+    "developers": {"price": 29, "models": 10, "predictions": 10000, "features": ["advanced_monitoring", "ai_assistant"]},
+    "elite-developers": {"price": 99, "models": 50, "predictions": 100000, "features": ["all_features", "priority_support"]}
+}
 SECRET_KEY = os.getenv("SECRET_KEY", "dd97c93db10888528758421c5f2afa3642897395f045892e05e6b8537a49e732")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "NDdlXSLqLTISn0Cl_XuuFhGXV3YecVcmLl7cRQHMeq4")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
