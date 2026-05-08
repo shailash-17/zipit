@@ -139,6 +139,8 @@ class ModelRegister(BaseModel):
     description: Optional[str] = None
 
 class PredictionData(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_name: str
     predictions: List[Any]
     features: List[Dict[str, Any]]
