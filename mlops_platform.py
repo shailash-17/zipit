@@ -741,6 +741,16 @@ async def get_user_models(user_id: int = Depends(verify_token), db: Session = De
 async def home(request: Request):
     return templates.TemplateResponse("home.html", {"request": request})
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring and CI/CD"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0",
+        "service": "ZipIt MLOps Platform"
+    }
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
