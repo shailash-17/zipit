@@ -13,6 +13,9 @@ import pandas as pd
 import json
 import pickle
 import joblib
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from pathlib import Path
@@ -120,8 +123,22 @@ if templates_dir.exists():
 
 # Security
 security = HTTPBearer()
-SECRET_KEY = os.getenv("SECRET_KEY", "zipit-secret-key")
-ALGORITHM = "HS256"
+SECRET_KEY = os.getenv("SECRET_KEY", "dd97c93db10888528758421c5f2afa3642897395f045892e05e6b8537a49e732")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "NDdlXSLqLTISn0Cl_XuuFhGXV3YecVcmLl7cRQHMeq4")
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+
+# Email configuration
+EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "true").lower() == "true"
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+
+# OpenAI configuration
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4")
+COPILOT_ENABLED = os.getenv("COPILOT_ENABLED", "true").lower() == "true"
 
 # Pydantic models
 class UserCreate(BaseModel):
@@ -161,19 +178,41 @@ def generate_api_key() -> str:
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(hours=24)
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(credentials.credentials, JWT_SECRET_KEY, algorithms=[ALGORITHM])
         user_id: int = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         return user_id
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+def send_email(to_email: str, subject: str, body: str):
+    """Send email notification"""
+    if not EMAIL_ENABLED or not SMTP_USERNAME or not SMTP_PASSWORD:
+        return False
+    
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USERNAME
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'html'))
+        
+        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
 
 def get_current_user(db: Session = Depends(get_db), user_id: int = Depends(verify_token)):
     user = db.query(User).filter(User.id == user_id).first()
@@ -229,6 +268,19 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    
+    # Send welcome email
+    if EMAIL_ENABLED:
+        welcome_body = f"""
+        <h2>Welcome to ZipIt MLOps Platform!</h2>
+        <p>Hi {user.full_name},</p>
+        <p>Your account has been created successfully.</p>
+        <p><strong>Username:</strong> {user.username}</p>
+        <p><strong>API Key:</strong> {db_user.api_key}</p>
+        <p>Start monitoring your ML models today!</p>
+        <p>Best regards,<br>ZipIt Team</p>
+        """
+        send_email(user.email, "Welcome to ZipIt MLOps Platform", welcome_body)
     
     access_token = create_access_token(data={"sub": str(db_user.id)})
     return {
@@ -385,6 +437,29 @@ async def get_model_stats(model_id: int, current_user: User = Depends(get_curren
         "prediction_history": [p.prediction for p in predictions]
     }
 
+@app.post("/api/ai/chat")
+async def ai_chat(request: dict, current_user: User = Depends(get_current_user)):
+    """AI Assistant Chat"""
+    if not COPILOT_ENABLED or not OPENAI_API_KEY:
+        return {"response": "AI Assistant is currently unavailable."}
+    
+    try:
+        import openai
+        openai.api_key = OPENAI_API_KEY
+        
+        response = openai.ChatCompletion.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": "You are a helpful MLOps assistant for ZipIt platform. Help users with machine learning, model monitoring, and MLOps best practices."},
+                {"role": "user", "content": request.get("message", "")}
+            ],
+            max_tokens=500
+        )
+        
+        return {"response": response.choices[0].message.content}
+    except Exception as e:
+        return {"response": "I'm having trouble right now. Please try again later."}
+
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     models = db.query(MLModel).filter(MLModel.user_id == current_user.id, MLModel.is_active == True).all()
@@ -397,8 +472,6 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user), db
         "average_accuracy": round(avg_accuracy * 100, 2),
         "active_models": len([m for m in models if m.total_predictions > 0])
     }
-
-# UI Routes
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     if templates_dir.exists():
