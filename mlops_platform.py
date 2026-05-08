@@ -46,7 +46,71 @@ engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} i
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Models
+class Organization(Base):
+    __tablename__ = "organizations"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    plan = Column(String, default="free-tier")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    users = relationship("User", back_populates="organization")
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    plan = Column(String)
+    status = Column(String)
+    stripe_subscription_id = Column(String)
+    current_period_start = Column(DateTime)
+    current_period_end = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Usage(Base):
+    __tablename__ = "usage"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    month = Column(String)
+    predictions_count = Column(Integer, default=0)
+    models_count = Column(Integer, default=0)
+    api_calls = Column(Integer, default=0)
+    storage_mb = Column(Float, default=0.0)
+
+class ABTest(Base):
+    __tablename__ = "ab_tests"
+    id = Column(Integer, primary_key=True, index=True)
+    model_id = Column(Integer, ForeignKey("ml_models.id"))
+    name = Column(String)
+    description = Column(Text)
+    control_version = Column(String)
+    treatment_version = Column(String)
+    traffic_split = Column(Float, default=0.5)
+    status = Column(String, default="running")
+    start_date = Column(DateTime, default=datetime.utcnow)
+    end_date = Column(DateTime)
+    results = Column(JSON)
+    model = relationship("MLModel", back_populates="experiments")
+
+class Alert(Base):
+    __tablename__ = "alerts"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    model_id = Column(Integer, ForeignKey("ml_models.id"))
+    alert_type = Column(String)
+    severity = Column(String)
+    message = Column(Text)
+    status = Column(String, default="active")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    resolved_at = Column(DateTime)
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    action = Column(String)
+    resource = Column(String)
+    details = Column(JSON)
+    ip_address = Column(String)
+    timestamp = Column(DateTime, default=datetime.utcnow)
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -56,9 +120,18 @@ class User(Base):
     hashed_password = Column(String)
     api_key = Column(String, unique=True)
     subscription_tier = Column(String, default="free-tier")
+    subscription_status = Column(String, default="active")
+    stripe_customer_id = Column(String)
+    subscription_end_date = Column(DateTime)
+    monthly_predictions = Column(Integer, default=0)
+    monthly_models = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+    last_login = Column(DateTime)
     is_active = Column(Boolean, default=True)
+    role = Column(String, default="user")
+    organization_id = Column(Integer, ForeignKey("organizations.id"))
     models = relationship("MLModel", back_populates="owner")
+    organization = relationship("Organization", back_populates="users")
 
 class MLModel(Base):
     __tablename__ = "ml_models"
@@ -75,6 +148,7 @@ class MLModel(Base):
     is_active = Column(Boolean, default=True)
     owner = relationship("User", back_populates="models")
     predictions = relationship("PredictionLog", back_populates="model")
+    experiments = relationship("ABTest", back_populates="model")
 
 class PredictionLog(Base):
     __tablename__ = "prediction_logs"
@@ -172,6 +246,16 @@ class ModelCreate(BaseModel):
 class PredictionRequest(BaseModel):
     features: List[float]
 
+class SubscriptionUpgrade(BaseModel):
+    plan: str = Field(..., pattern="^(developers|elite-developers)$")
+
+class ABTestCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    control_version: str
+    treatment_version: str
+    traffic_split: float = Field(default=0.5, ge=0.1, le=0.9)
+
 # Utility functions
 def get_db():
     db = SessionLocal()
@@ -229,6 +313,29 @@ def get_current_user(db: Session = Depends(get_db), user_id: int = Depends(verif
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+def check_usage_limits(user: User, action: str) -> bool:
+    """Check if user has exceeded usage limits"""
+    plan = SUBSCRIPTION_PLANS.get(user.subscription_tier, SUBSCRIPTION_PLANS["free-tier"])
+    
+    if action == "model_creation" and user.monthly_models >= plan["models"]:
+        return False
+    if action == "prediction" and user.monthly_predictions >= plan["predictions"]:
+        return False
+    
+    return True
+
+def log_audit(db: Session, user_id: int, action: str, resource: str, details: dict, ip: str = None):
+    """Log user actions for audit trail"""
+    audit = AuditLog(
+        user_id=user_id,
+        action=action,
+        resource=resource,
+        details=details,
+        ip_address=ip
+    )
+    db.add(audit)
+    db.commit()
 
 def create_sample_model(model_type: str):
     """Create a real working ML model"""
