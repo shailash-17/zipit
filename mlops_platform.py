@@ -131,6 +131,8 @@ class UserLogin(BaseModel):
     password: str
 
 class ModelRegister(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_name: str = Field(..., min_length=1, max_length=100)
     model_type: str = Field(..., pattern="^(classification|regression|clustering)$")
     framework: str = Field(..., pattern="^(sklearn|tensorflow|pytorch|xgboost|custom)$")
