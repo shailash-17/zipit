@@ -1,54 +1,45 @@
-# 🚂 MLOps Platform - Railway Deployment
+# 🚀 Deploy ZipIt MLOps Platform to Railway
 
-## 🎯 **RAILWAY = BEST CHOICE**
+## Quick Deploy Steps:
 
-### ✅ **Why Railway Wins**
-- 🆓 **FREE** with generous limits
-- 💾 **Persistent storage** - model uploads work
-- 🗄️ **SQLite persists** - no external DB needed  
-- ⏰ **No timeouts** - long-running processes OK
-- 🔄 **Background tasks** supported
-- 🔒 **Auto HTTPS** with custom domains
-- 🚀 **Zero config** deployment
+1. **Go to:** https://railway.app
+2. **Login** with GitHub
+3. **New Project** → **Deploy from GitHub repo**
+4. **Select:** https://github.com/shailash-17/zipit.git
+5. **Auto-deploy** starts immediately
 
-## 🚀 **DEPLOY NOW (30 seconds)**
+## Configuration:
+- ✅ **Runtime:** Docker (auto-detected)
+- ✅ **Port:** 8000 (from Dockerfile)
+- ✅ **Health Check:** /health endpoint
+- ✅ **Domain:** Custom domain support
 
-```bash
-# Install Railway CLI
-npm install -g @railway/cli
+## Features Available:
+- ✅ **User Authentication** (free-tier, developers, elite-developers)
+- ✅ **Model Registration & Management**
+- ✅ **Real-time Monitoring** (WebSocket)
+- ✅ **Drift Detection** (KS test, Wasserstein, PSI)
+- ✅ **Performance Metrics**
+- ✅ **AI Assistant Chat**
+- ✅ **Code Workspace IDE**
+- ✅ **Dashboard & Visualization**
+- ✅ **Alerting System**
+- ✅ **A/B Testing**
+- ✅ **API Documentation** (/docs)
 
-# Login
-railway login
+## Live URL:
+Your platform will be available at: `https://your-app-name.railway.app`
 
-# Deploy
-railway up
-```
+## Custom Domain:
+Add `zipit.com` in Railway dashboard → Settings → Domains
 
-**🌐 LIVE URL:** `https://your-app.railway.app`
+## Environment Variables (Optional):
+- `DATABASE_URL`: Uses SQLite by default
+- `SECRET_KEY`: Auto-generated secure key
 
-## 📊 **AFTER DEPLOYMENT**
+## Free Tier:
+- $5 free credits monthly
+- Sufficient for development and testing
+- Scales automatically
 
-Your MLOps platform will be live with:
-
-- 🏠 **Home:** `https://your-app.railway.app/`
-- 🔐 **Login:** `https://your-app.railway.app/login`  
-- 📊 **Dashboard:** `https://your-app.railway.app/dashboard`
-- 📚 **API Docs:** `https://your-app.railway.app/docs`
-
-## 🧪 **TEST DEPLOYMENT**
-
-```bash
-# Health check
-curl https://your-app.railway.app/
-
-# Register user
-curl -X POST https://your-app.railway.app/api/users/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"test","email":"test@example.com","full_name":"Test User","password":"test123"}'
-```
-
-## 🎉 **READY TO GO LIVE!**
-
-Run: `./deploy_railway.sh`
-
-Your MLOps platform will be live in 30 seconds! 🚀
+🎉 **All ZipIt MLOps features work perfectly on Railway!**
