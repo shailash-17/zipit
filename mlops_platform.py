@@ -20,7 +20,7 @@ from typing import Optional, List, Dict, Any
 from pathlib import Path
 
 # Core imports
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Request, BackgroundTasks, WebSocket
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Request, BackgroundTasks, WebSocket, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -1083,8 +1083,251 @@ async def get_dashboard_data(
         ]
     }
 
-# Web Interface
-@app.get("/login", response_class=HTMLResponse)
+# Monitoring and Alerting API
+@app.get("/metrics")
+async def prometheus_metrics():
+    """Prometheus metrics endpoint"""
+    if PROMETHEUS_AVAILABLE:
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    return {"message": "Prometheus not available"}
+
+@app.post("/api/alerts")
+async def create_alert(
+    alert: AlertCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create monitoring alert"""
+    db_alert = Alert(
+        user_id=current_user.id,
+        model_id=alert.model_id,
+        alert_type=alert.alert_type,
+        severity=alert.severity,
+        title=alert.title,
+        message=alert.message,
+        notification_channels=alert.notification_channels
+    )
+    db.add(db_alert)
+    db.commit()
+    
+    return {"message": "Alert created successfully", "alert_id": db_alert.id}
+
+@app.get("/api/alerts")
+async def get_alerts(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user alerts"""
+    alerts = db.query(Alert).filter(
+        Alert.user_id == current_user.id,
+        Alert.status == "active"
+    ).order_by(Alert.created_at.desc()).limit(50).all()
+    
+    return [
+        {
+            "id": a.id,
+            "alert_type": a.alert_type,
+            "severity": a.severity,
+            "title": a.title,
+            "message": a.message,
+            "created_at": a.created_at,
+            "status": a.status
+        } for a in alerts
+    ]
+
+@app.get("/api/models/{model_name}/monitoring")
+async def get_model_monitoring(
+    model_name: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get comprehensive model monitoring data"""
+    model = db.query(MLModel).filter(
+        MLModel.user_id == current_user.id,
+        MLModel.model_name == model_name
+    ).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    
+    # Get recent predictions
+    recent_predictions = db.query(PredictionLog).filter(
+        PredictionLog.model_id == model.id
+    ).order_by(PredictionLog.timestamp.desc()).limit(100).all()
+    
+    # Get performance metrics over time
+    metrics_timeline = db.query(ModelMetrics).filter(
+        ModelMetrics.model_id == model.id
+    ).order_by(ModelMetrics.timestamp.desc()).limit(30).all()
+    
+    # Get drift detection history
+    drift_timeline = db.query(DriftDetection).filter(
+        DriftDetection.model_id == model.id
+    ).order_by(DriftDetection.timestamp.desc()).limit(20).all()
+    
+    # Calculate real-time statistics
+    if recent_predictions:
+        prediction_values = [p.prediction for p in recent_predictions if p.prediction is not None]
+        avg_prediction = np.mean(prediction_values) if prediction_values else 0
+        prediction_std = np.std(prediction_values) if len(prediction_values) > 1 else 0
+        
+        # Calculate latency statistics
+        latencies = [p.latency_ms for p in recent_predictions if p.latency_ms is not None]
+        avg_latency = np.mean(latencies) if latencies else 0
+        p95_latency = np.percentile(latencies, 95) if latencies else 0
+    else:
+        avg_prediction = prediction_std = avg_latency = p95_latency = 0
+    
+    # Get latest metrics
+    latest_metrics = metrics_timeline[0] if metrics_timeline else None
+    latest_drift = drift_timeline[0] if drift_timeline else None
+    
+    return {
+        "model_info": {
+            "name": model.model_name,
+            "type": model.model_type,
+            "framework": model.framework,
+            "health_status": model.health_status,
+            "total_predictions": model.total_predictions,
+            "last_prediction": model.last_prediction
+        },
+        "real_time_stats": {
+            "avg_prediction": avg_prediction,
+            "prediction_std": prediction_std,
+            "avg_latency_ms": avg_latency,
+            "p95_latency_ms": p95_latency,
+            "predictions_last_hour": len([p for p in recent_predictions if p.timestamp > datetime.utcnow() - timedelta(hours=1)])
+        },
+        "latest_performance": {
+            "accuracy": latest_metrics.accuracy if latest_metrics else None,
+            "precision": latest_metrics.precision if latest_metrics else None,
+            "recall": latest_metrics.recall if latest_metrics else None,
+            "f1_score": latest_metrics.f1_score if latest_metrics else None,
+            "timestamp": latest_metrics.timestamp if latest_metrics else None
+        },
+        "drift_status": {
+            "drift_detected": latest_drift.drift_detected if latest_drift else False,
+            "drift_score": latest_drift.drift_score if latest_drift else 0,
+            "severity": latest_drift.drift_severity if latest_drift else "low",
+            "timestamp": latest_drift.timestamp if latest_drift else None
+        },
+        "predictions_timeline": [
+            {
+                "timestamp": p.timestamp,
+                "prediction": p.prediction,
+                "actual": p.actual,
+                "latency_ms": p.latency_ms
+            } for p in recent_predictions[:50]
+        ],
+        "metrics_timeline": [
+            {
+                "timestamp": m.timestamp,
+                "accuracy": m.accuracy,
+                "precision": m.precision,
+                "recall": m.recall,
+                "f1_score": m.f1_score
+            } for m in metrics_timeline
+        ],
+        "drift_timeline": [
+            {
+                "timestamp": d.timestamp,
+                "drift_detected": d.drift_detected,
+                "drift_score": d.drift_score,
+                "severity": d.drift_severity
+            } for d in drift_timeline
+        ]
+    }
+
+@app.get("/api/monitoring/overview")
+async def monitoring_overview(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get monitoring overview for all user models"""
+    models = db.query(MLModel).filter(
+        MLModel.user_id == current_user.id,
+        MLModel.is_active == True
+    ).all()
+    
+    overview = {
+        "total_models": len(models),
+        "active_models": len([m for m in models if m.health_status == "healthy"]),
+        "models_with_issues": len([m for m in models if m.health_status != "healthy"]),
+        "total_predictions_today": 0,
+        "models_status": []
+    }
+    
+    today = datetime.utcnow().date()
+    
+    for model in models:
+        # Get today's predictions
+        today_predictions = db.query(PredictionLog).filter(
+            PredictionLog.model_id == model.id,
+            PredictionLog.timestamp >= datetime.combine(today, datetime.min.time())
+        ).count()
+        
+        overview["total_predictions_today"] += today_predictions
+        
+        # Get latest metrics and drift
+        latest_metrics = db.query(ModelMetrics).filter(
+            ModelMetrics.model_id == model.id
+        ).order_by(ModelMetrics.timestamp.desc()).first()
+        
+        latest_drift = db.query(DriftDetection).filter(
+            DriftDetection.model_id == model.id
+        ).order_by(DriftDetection.timestamp.desc()).first()
+        
+        overview["models_status"].append({
+            "name": model.model_name,
+            "health_status": model.health_status,
+            "predictions_today": today_predictions,
+            "last_prediction": model.last_prediction,
+            "latest_accuracy": latest_metrics.accuracy if latest_metrics else None,
+            "drift_detected": latest_drift.drift_detected if latest_drift else False,
+            "drift_severity": latest_drift.drift_severity if latest_drift else "low"
+        })
+    
+    return overview
+
+@app.websocket("/ws/monitoring/{model_name}")
+async def websocket_monitoring(
+    websocket: WebSocket,
+    model_name: str,
+    db: Session = Depends(get_db)
+):
+    """Real-time monitoring via WebSocket"""
+    await websocket.accept()
+    
+    try:
+        while True:
+            # Get latest model data
+            model = db.query(MLModel).filter(
+                MLModel.model_name == model_name
+            ).first()
+            
+            if model:
+                # Get recent prediction
+                latest_prediction = db.query(PredictionLog).filter(
+                    PredictionLog.model_id == model.id
+                ).order_by(PredictionLog.timestamp.desc()).first()
+                
+                # Send real-time update
+                await websocket.send_json({
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "model_name": model_name,
+                    "health_status": model.health_status,
+                    "total_predictions": model.total_predictions,
+                    "latest_prediction": {
+                        "value": latest_prediction.prediction if latest_prediction else None,
+                        "timestamp": latest_prediction.timestamp.isoformat() if latest_prediction else None
+                    }
+                })
+            
+            await asyncio.sleep(5)  # Update every 5 seconds
+            
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+    finally:
+        await websocket.close()
 async def login_page(request: Request):
     if templates_dir.exists():
         return templates.TemplateResponse("login.html", {"request": request})
