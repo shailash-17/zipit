@@ -292,53 +292,77 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
 @app.get("/auth/{provider}")
 async def oauth_login(provider: str, request: Request):
+    if provider == 'google' and not os.getenv('GOOGLE_ENABLED', 'true').lower() == 'true':
+        raise HTTPException(status_code=400, detail="Google login disabled")
+    if provider == 'github' and not os.getenv('GITHUB_ENABLED', 'false').lower() == 'true':
+        raise HTTPException(status_code=400, detail="GitHub login disabled")
     if provider not in ['google', 'github']:
         raise HTTPException(status_code=400, detail="Invalid provider")
     
-    client = oauth.create_client(provider)
-    redirect_uri = request.url_for('oauth_callback', provider=provider)
-    return await client.authorize_redirect(request, redirect_uri)
+    try:
+        client = oauth.create_client(provider)
+        redirect_uri = str(request.base_url) + f"auth/{provider}/callback"
+        return await client.authorize_redirect(request, redirect_uri)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OAuth setup error: {str(e)}")
 
 @app.get("/auth/{provider}/callback")
 async def oauth_callback(provider: str, request: Request, db: Session = Depends(get_db)):
     if provider not in ['google', 'github']:
         raise HTTPException(status_code=400, detail="Invalid provider")
     
-    client = oauth.create_client(provider)
-    token = await client.authorize_access_token(request)
-    
-    if provider == 'google':
-        user_info = token.get('userinfo')
-        email = user_info.get('email')
-        name = user_info.get('name')
-        username = email.split('@')[0]
-    else:  # github
-        user_resp = await client.get('user', token=token)
-        user_info = user_resp.json()
-        email = user_info.get('email')
-        name = user_info.get('name') or user_info.get('login')
-        username = user_info.get('login')
-    
-    # Find or create user
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        user = User(
-            username=username,
-            email=email,
-            full_name=name,
-            hashed_password="oauth_user",
-            api_key=generate_api_key()
+    try:
+        client = oauth.create_client(provider)
+        token = await client.authorize_access_token(request)
+        
+        if provider == 'google':
+            user_info = token.get('userinfo')
+            if not user_info:
+                raise HTTPException(status_code=400, detail="Failed to get user info from Google")
+            email = user_info.get('email')
+            name = user_info.get('name')
+            username = email.split('@')[0] if email else 'user'
+        else:  # github
+            user_resp = await client.get('user', token=token)
+            user_info = user_resp.json()
+            email = user_info.get('email')
+            name = user_info.get('name') or user_info.get('login')
+            username = user_info.get('login')
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Email not provided by OAuth provider")
+        
+        # Find or create user
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            user = User(
+                username=username,
+                email=email,
+                full_name=name or username,
+                hashed_password="oauth_user",
+                api_key=generate_api_key()
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        
+        access_token = create_access_token(data={"sub": str(user.id)})
+        
+        # Create response with redirect
+        response = RedirectResponse(url='/dashboard', status_code=302)
+        response.set_cookie(
+            key="access_token", 
+            value=access_token, 
+            httponly=True, 
+            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            secure=True,
+            samesite="lax"
         )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    
-    access_token = create_access_token(data={"sub": str(user.id)})
-    
-    # Redirect to dashboard with token
-    response = RedirectResponse(url='/dashboard')
-    response.set_cookie(key="access_token", value=access_token, httponly=True)
-    return response
+        return response
+        
+    except Exception as e:
+        # Redirect to login with error
+        return RedirectResponse(url=f'/login?error={str(e)}', status_code=302)
 
 @app.post("/api/models/register")
 async def register_model(model: ModelCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
