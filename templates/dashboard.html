@@ -3,298 +3,735 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLOps Monitoring Dashboard</title>
+    <title>ZipIt MLOps Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 2rem; }
-        .header h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
-        .header p { opacity: 0.9; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-        .stat-card { background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .stat-card h3 { color: #333; margin-bottom: 0.5rem; font-size: 0.9rem; text-transform: uppercase; }
-        .stat-card .value { font-size: 2rem; font-weight: bold; color: #667eea; }
-        .stat-card .change { font-size: 0.8rem; margin-top: 0.5rem; }
-        .positive { color: #10b981; }
-        .negative { color: #ef4444; }
-        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
-        .chart-card { background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .chart-card h3 { margin-bottom: 1rem; color: #333; }
-        .models-section { background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .model-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; }
-        .model-info h4 { color: #333; margin-bottom: 0.25rem; }
-        .model-info p { color: #666; font-size: 0.9rem; }
-        .model-status { padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
-        .status-healthy { background: #dcfce7; color: #166534; }
-        .status-warning { background: #fef3c7; color: #92400e; }
-        .status-critical { background: #fecaca; color: #991b1b; }
-        .btn { padding: 0.5rem 1rem; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-primary { background: #667eea; color: white; }
-        .btn-secondary { background: #e5e7eb; color: #374151; }
-        .alert { padding: 1rem; margin-bottom: 1rem; border-radius: 5px; }
-        .alert-warning { background: #fef3c7; border-left: 4px solid #f59e0b; color: #92400e; }
-        .alert-success { background: #dcfce7; border-left: 4px solid #10b981; color: #166534; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+        }
+        
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: #111111;
+            border-right: 1px solid #333;
+            padding: 2rem 0;
+            z-index: 1000;
+        }
+        
+        .logo {
+            padding: 0 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .logo h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 1rem 2rem;
+            color: #ccc;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            border-right: 3px solid #667eea;
+        }
+        
+        .nav-link i {
+            margin-right: 1rem;
+            width: 20px;
+        }
+        
+        .main-content {
+            margin-left: 280px;
+            padding: 2rem;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #333;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .stat-card {
+            background: #111111;
+            border: 1px solid #333;
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-title {
+            color: #ccc;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-change {
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .stat-change.positive { color: #10b981; }
+        .stat-change.negative { color: #ef4444; }
+        
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .card {
+            background: #111111;
+            border: 1px solid #333;
+            border-radius: 16px;
+            padding: 2rem;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #333;
+            color: #ccc;
+        }
+        
+        .btn-secondary:hover {
+            background: #444;
+            box-shadow: none;
+        }
+        
+        .model-list {
+            list-style: none;
+        }
+        
+        .model-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border: 1px solid #333;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .model-item:hover {
+            border-color: #667eea;
+        }
+        
+        .model-info h4 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .model-meta {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .model-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-healthy {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        
+        .status-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #111111;
+            border: 1px solid #333;
+            border-radius: 16px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .close {
+            background: none;
+            border: none;
+            color: #ccc;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #ccc;
+            font-weight: 500;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+        }
+        
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <img src="/static/images/logo-nav.png" alt="ZipIt" style="height: 30px; margin-right: 10px; vertical-align: middle;">
-        <h1 style="display: inline; vertical-align: middle;">ZipIt MLOps Dashboard</h1>
-        <p>Real-time monitoring for all your ML models</p>
+    <div class="sidebar">
+        <div class="logo">
+            <h1>ZipIt</h1>
+        </div>
+        
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a href="#" class="nav-link active" data-section="overview">
+                    <i class="fas fa-chart-pie"></i>
+                    Overview
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-section="models">
+                    <i class="fas fa-brain"></i>
+                    Models
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-section="monitoring">
+                    <i class="fas fa-chart-line"></i>
+                    Monitoring
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/workspace" class="nav-link">
+                    <i class="fas fa-code"></i>
+                    Workspace
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-section="settings">
+                    <i class="fas fa-cog"></i>
+                    Settings
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </a>
+            </li>
+        </ul>
     </div>
-
-    <div class="container">
-        <!-- Alerts -->
-        <div id="alerts"></div>
-
-        <!-- Stats Overview -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>Total Models</h3>
-                <div class="value" id="total-models">-</div>
-                <div class="change positive">+2 this week</div>
-            </div>
-            <div class="stat-card">
-                <h3>Predictions Today</h3>
-                <div class="value" id="predictions-today">-</div>
-                <div class="change positive">+15% vs yesterday</div>
-            </div>
-            <div class="stat-card">
-                <h3>Drift Alerts</h3>
-                <div class="value" id="drift-alerts">-</div>
-                <div class="change negative">2 models need attention</div>
-            </div>
-            <div class="stat-card">
-                <h3>Avg Accuracy</h3>
-                <div class="value" id="avg-accuracy">-</div>
-                <div class="change positive">+2.1% this month</div>
+    
+    <div class="main-content">
+        <div class="header">
+            <h1>Dashboard</h1>
+            <div class="user-info">
+                <div class="user-avatar" id="user-avatar">U</div>
+                <span id="user-name">User</span>
             </div>
         </div>
-
-        <!-- Charts -->
-        <div class="charts-grid">
-            <div class="chart-card">
-                <h3>📈 Model Performance Trends</h3>
-                <canvas id="performanceChart" width="400" height="200"></canvas>
+        
+        <div id="overview-section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Total Models</span>
+                        <div class="stat-icon" style="background: rgba(102, 126, 234, 0.2); color: #667eea;">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="total-models">0</div>
+                    <div class="stat-change positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>Active models</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Predictions Today</span>
+                        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="predictions-today">0</div>
+                    <div class="stat-change positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>+12% from yesterday</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Drift Alerts</span>
+                        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="drift-alerts">0</div>
+                    <div class="stat-change negative">
+                        <i class="fas fa-arrow-down"></i>
+                        <span>No active alerts</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">System Health</span>
+                        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">
+                            <i class="fas fa-heartbeat"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">99.9%</div>
+                    <div class="stat-change positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>All systems operational</span>
+                    </div>
+                </div>
             </div>
-            <div class="chart-card">
-                <h3>🔍 Drift Detection Status</h3>
-                <canvas id="driftChart" width="400" height="200"></canvas>
+            
+            <div class="content-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Performance Overview</h3>
+                        <button class="btn btn-secondary">View Details</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="performance-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Recent Models</h3>
+                        <button class="btn" onclick="openModal('register-model-modal')">Add Model</button>
+                    </div>
+                    <ul class="model-list" id="model-list">
+                        <li class="model-item">
+                            <div class="model-info">
+                                <h4>No models yet</h4>
+                                <div class="model-meta">Register your first model to get started</div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
-
-        <!-- Models List -->
-        <div class="models-section">
-            <h3 style="margin-bottom: 1rem;">🤖 Your ML Models</h3>
-            <div id="models-list">
-                <!-- Models will be loaded here -->
+    </div>
+    
+    <!-- Register Model Modal -->
+    <div id="register-model-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Register New Model</h3>
+                <button class="close" onclick="closeModal('register-model-modal')">&times;</button>
             </div>
+            <form id="register-model-form">
+                <div class="form-group">
+                    <label>Model Name</label>
+                    <input type="text" name="model_name" required>
+                </div>
+                <div class="form-group">
+                    <label>Model Type</label>
+                    <select name="model_type" required>
+                        <option value="">Select type</option>
+                        <option value="classification">Classification</option>
+                        <option value="regression">Regression</option>
+                        <option value="clustering">Clustering</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Framework</label>
+                    <select name="framework" required>
+                        <option value="">Select framework</option>
+                        <option value="sklearn">Scikit-learn</option>
+                        <option value="tensorflow">TensorFlow</option>
+                        <option value="pytorch">PyTorch</option>
+                        <option value="xgboost">XGBoost</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn">Register Model</button>
+            </form>
         </div>
     </div>
 
     <script>
-        // Get API token from localStorage or prompt user
-        let apiToken = localStorage.getItem('mlops_token');
-        if (!apiToken) {
-            apiToken = prompt('Enter your API token:');
-            if (apiToken) {
-                localStorage.setItem('mlops_token', apiToken);
+        const API_BASE = '/api';
+        let userModels = [];
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            loadUserInfo();
+            loadModels();
+            initializeChart();
+            setupNavigation();
+        });
+        
+        function checkAuth() {
+            const token = localStorage.getItem('zipit_token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
             }
         }
-
-        const API_BASE = window.location.origin + '/api';
-        const headers = {
-            'Authorization': `Bearer ${apiToken}`,
-            'Content-Type': 'application/json'
-        };
-
-        // Load dashboard data
-        async function loadDashboard() {
+        
+        function loadUserInfo() {
+            const user = JSON.parse(localStorage.getItem('zipit_user') || '{}');
+            if (user.username) {
+                document.getElementById('user-name').textContent = user.username;
+                document.getElementById('user-avatar').textContent = user.username.charAt(0).toUpperCase();
+            }
+        }
+        
+        async function loadModels() {
             try {
-                // Load user models
-                const modelsResponse = await fetch(`${API_BASE}/user/models`, { headers });
-                const models = await modelsResponse.json();
-                
-                // Update stats
-                document.getElementById('total-models').textContent = models.length;
-                
-                let totalPredictions = 0;
-                let driftAlerts = 0;
-                let accuracySum = 0;
-                let accuracyCount = 0;
-
-                // Load models list
-                const modelsList = document.getElementById('models-list');
-                modelsList.innerHTML = '';
-
-                for (const model of models) {
-                    totalPredictions += model.total_predictions || 0;
-                    
-                    // Get dashboard data for each model
-                    try {
-                        const dashboardResponse = await fetch(`${API_BASE}/dashboard/${model.name}`, { headers });
-                        const dashboardData = await dashboardResponse.json();
-                        
-                        // Count drift alerts
-                        const recentDrift = dashboardData.drift_status?.filter(d => d.drift_detected) || [];
-                        if (recentDrift.length > 0) driftAlerts++;
-                        
-                        // Calculate average accuracy
-                        const recentMetrics = dashboardData.recent_metrics || [];
-                        if (recentMetrics.length > 0 && recentMetrics[0].accuracy) {
-                            accuracySum += recentMetrics[0].accuracy;
-                            accuracyCount++;
-                        }
-                        
-                        // Add model to list
-                        const modelItem = createModelItem(model, dashboardData);
-                        modelsList.appendChild(modelItem);
-                        
-                    } catch (error) {
-                        console.error(`Error loading data for model ${model.name}:`, error);
-                        const modelItem = createModelItem(model, null);
-                        modelsList.appendChild(modelItem);
+                const token = localStorage.getItem('zipit_token');
+                const response = await fetch(`${API_BASE}/user/models`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
                     }
-                }
-
-                // Update stats
-                document.getElementById('predictions-today').textContent = totalPredictions.toLocaleString();
-                document.getElementById('drift-alerts').textContent = driftAlerts;
-                document.getElementById('avg-accuracy').textContent = 
-                    accuracyCount > 0 ? `${(accuracySum / accuracyCount * 100).toFixed(1)}%` : 'N/A';
-
-                // Show alerts if needed
-                showAlerts(driftAlerts);
+                });
                 
-                // Create charts
-                createPerformanceChart();
-                createDriftChart();
-
+                if (response.ok) {
+                    userModels = await response.json();
+                    updateModelStats();
+                    renderModelList();
+                } else {
+                    console.error('Failed to load models');
+                }
             } catch (error) {
-                console.error('Error loading dashboard:', error);
-                document.getElementById('alerts').innerHTML = `
-                    <div class="alert alert-warning">
-                        ⚠️ Failed to load dashboard data. Please check your API token and try again.
-                    </div>
+                console.error('Error loading models:', error);
+            }
+        }
+        
+        function updateModelStats() {
+            document.getElementById('total-models').textContent = userModels.length;
+            
+            const totalPredictions = userModels.reduce((sum, model) => sum + (model.total_predictions || 0), 0);
+            document.getElementById('predictions-today').textContent = totalPredictions;
+        }
+        
+        function renderModelList() {
+            const modelList = document.getElementById('model-list');
+            
+            if (userModels.length === 0) {
+                modelList.innerHTML = `
+                    <li class="model-item">
+                        <div class="model-info">
+                            <h4>No models yet</h4>
+                            <div class="model-meta">Register your first model to get started</div>
+                        </div>
+                    </li>
                 `;
-            }
-        }
-
-        function createModelItem(model, dashboardData) {
-            const item = document.createElement('div');
-            item.className = 'model-item';
-            
-            const status = getModelStatus(model, dashboardData);
-            const lastPrediction = model.last_prediction ? 
-                new Date(model.last_prediction).toLocaleDateString() : 'Never';
-            
-            item.innerHTML = `
-                <div class="model-info">
-                    <h4>${model.name}</h4>
-                    <p>${model.framework} • ${model.type} • ${model.total_predictions || 0} predictions • Last: ${lastPrediction}</p>
-                </div>
-                <div>
-                    <span class="model-status ${status.class}">${status.text}</span>
-                    <button class="btn btn-primary" onclick="viewModel('${model.name}')" style="margin-left: 1rem;">View Details</button>
-                </div>
-            `;
-            
-            return item;
-        }
-
-        function getModelStatus(model, dashboardData) {
-            if (!dashboardData) {
-                return { class: 'status-warning', text: 'No Data' };
+                return;
             }
             
-            const recentDrift = dashboardData.drift_status?.filter(d => d.drift_detected) || [];
-            if (recentDrift.length > 0) {
-                const highSeverity = recentDrift.some(d => d.severity === 'high');
-                return highSeverity ? 
-                    { class: 'status-critical', text: 'High Drift' } :
-                    { class: 'status-warning', text: 'Drift Detected' };
-            }
-            
-            return { class: 'status-healthy', text: 'Healthy' };
-        }
-
-        function showAlerts(driftAlerts) {
-            const alertsDiv = document.getElementById('alerts');
-            if (driftAlerts > 0) {
-                alertsDiv.innerHTML = `
-                    <div class="alert alert-warning">
-                        ⚠️ ${driftAlerts} model(s) showing drift. Review and retrain if necessary.
+            modelList.innerHTML = userModels.map(model => `
+                <li class="model-item">
+                    <div class="model-info">
+                        <h4>${model.name}</h4>
+                        <div class="model-meta">${model.framework} • ${model.type} • ${model.total_predictions} predictions</div>
                     </div>
-                `;
-            } else {
-                alertsDiv.innerHTML = `
-                    <div class="alert alert-success">
-                        ✅ All models are performing well. No drift detected.
-                    </div>
-                `;
-            }
+                    <span class="model-status status-healthy">Healthy</span>
+                </li>
+            `).join('');
         }
-
-        function createPerformanceChart() {
-            const ctx = document.getElementById('performanceChart').getContext('2d');
+        
+        function initializeChart() {
+            const ctx = document.getElementById('performance-chart').getContext('2d');
             new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                     datasets: [{
-                        label: 'Accuracy',
-                        data: [0.92, 0.91, 0.93, 0.89, 0.94, 0.92, 0.95],
+                        label: 'Model Accuracy',
+                        data: [92, 94, 91, 95, 93, 96, 94],
                         borderColor: '#667eea',
                         backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        tension: 0.4
+                        tension: 0.4,
+                        fill: true
                     }]
                 },
                 options: {
                     responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: false,
-                            min: 0.8,
-                            max: 1.0
-                        }
-                    }
-                }
-            });
-        }
-
-        function createDriftChart() {
-            const ctx = document.getElementById('driftChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Healthy', 'Low Drift', 'Medium Drift', 'High Drift'],
-                    datasets: [{
-                        data: [8, 2, 1, 0],
-                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#7c2d12']
-                    }]
-                },
-                options: {
-                    responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'bottom'
+                            labels: {
+                                color: '#ccc'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#ccc' },
+                            grid: { color: '#333' }
+                        },
+                        y: {
+                            ticks: { color: '#ccc' },
+                            grid: { color: '#333' }
                         }
                     }
                 }
             });
         }
-
-        function viewModel(modelName) {
-            window.open(`/dashboard?model=${modelName}`, '_blank');
+        
+        function setupNavigation() {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    if (this.getAttribute('href') === '#') {
+                        e.preventDefault();
+                    }
+                    
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
         }
-
-        // Load dashboard on page load
-        loadDashboard();
-
-        // Refresh every 30 seconds
-        setInterval(loadDashboard, 30000);
+        
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        document.getElementById('register-model-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const modelData = {
+                model_name: formData.get('model_name'),
+                model_type: formData.get('model_type'),
+                framework: formData.get('framework'),
+                description: formData.get('description')
+            };
+            
+            try {
+                const token = localStorage.getItem('zipit_token');
+                const response = await fetch(`${API_BASE}/models/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(modelData)
+                });
+                
+                if (response.ok) {
+                    closeModal('register-model-modal');
+                    e.target.reset();
+                    loadModels(); // Reload models
+                    alert('Model registered successfully!');
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to register model');
+                }
+            } catch (error) {
+                alert('Connection error. Please try again.');
+            }
+        });
+        
+        function logout() {
+            localStorage.removeItem('zipit_token');
+            localStorage.removeItem('zipit_user');
+            window.location.href = '/login';
+        }
+        
+        // Close modals when clicking outside
+        window.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal')) {
+                e.target.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>

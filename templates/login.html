@@ -3,202 +3,370 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/images/favicon-32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/static/images/favicon-16.png">
-    <link rel="manifest" href="/static/manifest.json">
-    <title>ZipIt MLOps - Login</title>
+    <title>ZipIt MLOps Platform</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        
+        .container {
             min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .left-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
-            align-items: center;
+            flex-direction: column;
             justify-content: center;
+            align-items: center;
+            padding: 4rem;
+            position: relative;
+            overflow: hidden;
         }
-        .login-container {
-            background: white;
-            padding: 3rem;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 400px;
+        
+        .left-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+        
+        .brand {
+            position: relative;
+            z-index: 2;
             text-align: center;
+            margin-bottom: 3rem;
         }
-        .logo {
-            font-size: 3rem;
+        
+        .brand h1 {
+            font-size: 4rem;
+            font-weight: 800;
             margin-bottom: 1rem;
+            background: linear-gradient(45deg, #fff, #f0f0f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        h1 {
-            color: #333;
-            margin-bottom: 0.5rem;
-            font-size: 2rem;
-        }
-        .subtitle {
-            color: #666;
+        
+        .brand p {
+            font-size: 1.5rem;
+            opacity: 0.9;
             margin-bottom: 2rem;
         }
+        
+        .features {
+            position: relative;
+            z-index: 2;
+            max-width: 400px;
+        }
+        
+        .feature {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .feature i {
+            margin-right: 1rem;
+            font-size: 1.5rem;
+            color: #10b981;
+        }
+        
+        .right-panel {
+            background: #111111;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem;
+        }
+        
+        .auth-container {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .auth-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .auth-header h2 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+        }
+        
+        .auth-header p {
+            color: #888;
+            font-size: 1.1rem;
+        }
+        
         .form-group {
             margin-bottom: 1.5rem;
-            text-align: left;
         }
-        label {
+        
+        .form-group label {
             display: block;
             margin-bottom: 0.5rem;
-            color: #333;
+            color: #ccc;
             font-weight: 500;
         }
-        input[type="text"], input[type="email"], input[type="password"] {
-            width: 100%;
-            padding: 1rem;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
+        
+        .input-wrapper {
+            position: relative;
         }
-        input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus {
+        
+        .input-wrapper i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+        
+        input {
+            width: 100%;
+            padding: 1rem 1rem 1rem 3rem;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus {
             outline: none;
             border-color: #667eea;
+            background: #222;
         }
+        
         .btn {
             width: 100%;
             padding: 1rem;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 1rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s;
-            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
         }
+        
         .btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }
-        .toggle-form {
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .toggle-auth {
+            text-align: center;
+            color: #888;
+        }
+        
+        .toggle-auth a {
             color: #667eea;
-            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .toggle-auth a:hover {
             text-decoration: underline;
         }
+        
         .alert {
             padding: 1rem;
+            border-radius: 8px;
             margin-bottom: 1rem;
-            border-radius: 10px;
             display: none;
         }
+        
         .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .features {
-            margin-top: 2rem;
-            text-align: left;
-        }
-        .feature-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 0.5rem;
-            color: #666;
-            font-size: 0.9rem;
-        }
-        .feature-item::before {
-            content: "✓";
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid #10b981;
             color: #10b981;
-            font-weight: bold;
-            margin-right: 0.5rem;
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .left-panel {
+                display: none;
+            }
+            
+            .right-panel {
+                padding: 2rem;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <img src="/static/images/logo-nav.png" alt="ZipIt" style="height: 40px; margin-bottom: 1rem;">
-        <h1>ZipIt MLOps</h1>
-        <p class="subtitle">Monitor any ML model in production</p>
+    <div class="container">
+        <div class="left-panel">
+            <div class="brand">
+                <h1>ZipIt</h1>
+                <p>Enterprise MLOps Platform</p>
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Real-time Model Monitoring</span>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Advanced Drift Detection</span>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-code"></i>
+                    <span>Integrated Development Environment</span>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-robot"></i>
+                    <span>AI-Powered Assistant</span>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-cloud"></i>
+                    <span>Multi-Cloud Deployment</span>
+                </div>
+            </div>
+        </div>
         
-        <div id="alert" class="alert"></div>
-        
-        <!-- Login Form -->
-        <form id="login-form">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
+        <div class="right-panel">
+            <div class="auth-container">
+                <div class="auth-header">
+                    <h2 id="auth-title">Welcome Back</h2>
+                    <p id="auth-subtitle">Sign in to your account</p>
+                </div>
+                
+                <div id="alert" class="alert"></div>
+                
+                <!-- Login Form -->
+                <form id="login-form">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-user"></i>
+                            <input type="text" name="username" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" name="password" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="login-btn">
+                        Sign In
+                    </button>
+                </form>
+                
+                <!-- Register Form -->
+                <form id="register-form" style="display: none;">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-user"></i>
+                            <input type="text" name="username" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Email</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" name="email" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-id-card"></i>
+                            <input type="text" name="full_name" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" name="password" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="register-btn">
+                        Create Account
+                    </button>
+                </form>
+                
+                <div class="toggle-auth">
+                    <span id="toggle-text">Don't have an account?</span>
+                    <a href="#" id="toggle-link">Sign up</a>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <button type="submit" class="btn">Sign In</button>
-        </form>
-        
-        <!-- Register Form -->
-        <form id="register-form" style="display: none;">
-            <div class="form-group">
-                <label for="reg-username">Username</label>
-                <input type="text" id="reg-username" name="username" required>
-            </div>
-            <div class="form-group">
-                <label for="reg-email">Email</label>
-                <input type="email" id="reg-email" name="email" required>
-            </div>
-            <div class="form-group">
-                <label for="reg-fullname">Full Name</label>
-                <input type="text" id="reg-fullname" name="full_name" required>
-            </div>
-            <div class="form-group">
-                <label for="reg-password">Password</label>
-                <input type="password" id="reg-password" name="password" required>
-            </div>
-            <button type="submit" class="btn">Create Account</button>
-        </form>
-        
-        <p>
-            <span id="toggle-text">Don't have an account?</span>
-            <span class="toggle-form" onclick="toggleForm()">Sign up</span>
-        </p>
-        
-        <div class="features">
-            <div class="feature-item">Free forever - No usage limits</div>
-            <div class="feature-item">Any ML framework supported</div>
-            <div class="feature-item">Real-time drift detection</div>
-            <div class="feature-item">Professional dashboards</div>
         </div>
     </div>
 
     <script>
-        const API_BASE = window.location.origin + '/api';
-        let isLoginForm = true;
-
-        function toggleForm() {
-            const loginForm = document.getElementById('login-form');
-            const registerForm = document.getElementById('register-form');
-            const toggleText = document.getElementById('toggle-text');
-            const toggleLink = document.querySelector('.toggle-form');
-            
-            if (isLoginForm) {
-                loginForm.style.display = 'none';
-                registerForm.style.display = 'block';
-                toggleText.textContent = 'Already have an account?';
-                toggleLink.textContent = 'Sign in';
-                isLoginForm = false;
-            } else {
-                loginForm.style.display = 'block';
-                registerForm.style.display = 'none';
-                toggleText.textContent = "Don't have an account?";
-                toggleLink.textContent = 'Sign up';
-                isLoginForm = true;
-            }
-        }
-
+        const API_BASE = '/api';
+        let isLoginMode = true;
+        
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const authTitle = document.getElementById('auth-title');
+        const authSubtitle = document.getElementById('auth-subtitle');
+        const toggleText = document.getElementById('toggle-text');
+        const toggleLink = document.getElementById('toggle-link');
+        const alert = document.getElementById('alert');
+        
         function showAlert(message, type) {
-            const alert = document.getElementById('alert');
             alert.textContent = message;
             alert.className = `alert alert-${type}`;
             alert.style.display = 'block';
@@ -207,13 +375,49 @@
                 alert.style.display = 'none';
             }, 5000);
         }
-
-        // Login form handler
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
+        
+        function setLoading(button, loading) {
+            if (loading) {
+                button.innerHTML = '<span class="loading"></span> Processing...';
+                button.disabled = true;
+            } else {
+                button.innerHTML = isLoginMode ? 'Sign In' : 'Create Account';
+                button.disabled = false;
+            }
+        }
+        
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            
+            if (isLoginMode) {
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+                authTitle.textContent = 'Welcome Back';
+                authSubtitle.textContent = 'Sign in to your account';
+                toggleText.textContent = "Don't have an account?";
+                toggleLink.textContent = 'Sign up';
+            } else {
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+                authTitle.textContent = 'Create Account';
+                authSubtitle.textContent = 'Join the MLOps revolution';
+                toggleText.textContent = 'Already have an account?';
+                toggleLink.textContent = 'Sign in';
+            }
+        }
+        
+        toggleLink.addEventListener('click', (e) => {
             e.preventDefault();
+            toggleAuthMode();
+        });
+        
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const button = document.getElementById('login-btn');
+            setLoading(button, true);
             
             const formData = new FormData(e.target);
-            const loginData = {
+            const data = {
                 username: formData.get('username'),
                 password: formData.get('password')
             };
@@ -222,14 +426,14 @@
                 const response = await fetch(`${API_BASE}/users/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(loginData)
+                    body: JSON.stringify(data)
                 });
                 
                 const result = await response.json();
                 
                 if (response.ok) {
-                    localStorage.setItem('mlops_token', result.token);
-                    localStorage.setItem('mlops_api_key', result.api_key);
+                    localStorage.setItem('zipit_token', result.access_token);
+                    localStorage.setItem('zipit_user', JSON.stringify(result.user_info));
                     showAlert('Login successful! Redirecting...', 'success');
                     
                     setTimeout(() => {
@@ -239,16 +443,19 @@
                     showAlert(result.detail || 'Login failed', 'error');
                 }
             } catch (error) {
-                showAlert('Network error. Please try again.', 'error');
+                showAlert('Connection error. Please try again.', 'error');
+            } finally {
+                setLoading(button, false);
             }
         });
-
-        // Register form handler
-        document.getElementById('register-form').addEventListener('submit', async (e) => {
+        
+        registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const button = document.getElementById('register-btn');
+            setLoading(button, true);
             
             const formData = new FormData(e.target);
-            const registerData = {
+            const data = {
                 username: formData.get('username'),
                 email: formData.get('email'),
                 full_name: formData.get('full_name'),
@@ -259,14 +466,13 @@
                 const response = await fetch(`${API_BASE}/users/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(registerData)
+                    body: JSON.stringify(data)
                 });
                 
                 const result = await response.json();
                 
                 if (response.ok) {
-                    localStorage.setItem('mlops_token', result.token);
-                    localStorage.setItem('mlops_api_key', result.api_key);
+                    localStorage.setItem('zipit_token', result.access_token);
                     showAlert('Account created successfully! Redirecting...', 'success');
                     
                     setTimeout(() => {
@@ -276,12 +482,14 @@
                     showAlert(result.detail || 'Registration failed', 'error');
                 }
             } catch (error) {
-                showAlert('Network error. Please try again.', 'error');
+                showAlert('Connection error. Please try again.', 'error');
+            } finally {
+                setLoading(button, false);
             }
         });
-
+        
         // Check if already logged in
-        if (localStorage.getItem('mlops_token')) {
+        if (localStorage.getItem('zipit_token')) {
             window.location.href = '/dashboard';
         }
     </script>
