@@ -1328,9 +1328,13 @@ async def websocket_monitoring(
         logger.error(f"WebSocket error: {e}")
     finally:
         await websocket.close()
+@app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     if templates_dir.exists():
-        return templates.TemplateResponse("login.html", {"request": request})
+        try:
+            return templates.TemplateResponse("login.html", {"request": request})
+        except:
+            pass
     return HTMLResponse("""
     <html><head><title>ZipIt MLOps Login</title></head>
     <body><h1>ZipIt MLOps Platform</h1>
@@ -1340,7 +1344,10 @@ async def login_page(request: Request):
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     if templates_dir.exists():
-        return templates.TemplateResponse("dashboard.html", {"request": request})
+        try:
+            return templates.TemplateResponse("dashboard.html", {"request": request})
+        except:
+            pass
     return HTMLResponse("""
     <html><head><title>ZipIt MLOps Dashboard</title></head>
     <body><h1>ZipIt MLOps Dashboard</h1>
