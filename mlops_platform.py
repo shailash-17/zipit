@@ -407,7 +407,27 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
         "user_info": {"username": db_user.username, "subscription_tier": db_user.subscription_tier}
     }
 
-@app.get("/auth/{provider}")
+@app.post("/api/users/login")
+async def login_user(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.username == user.username).first()
+    if not db_user or db_user.hashed_password != hash_password(user.password):
+        raise HTTPException(status_code=400, detail="Invalid credentials")
+    
+    access_token = create_access_token(data={"sub": str(db_user.id)})
+    return {
+        "message": "Login successful",
+        "access_token": access_token,
+        "user_info": {"username": db_user.username, "subscription_tier": db_user.subscription_tier}
+    }
+
+@app.get("/manual-login", response_class=HTMLResponse)
+async def manual_login_page(request: Request):
+    if templates_dir.exists():
+        try:
+            return templates.TemplateResponse("manual-login.html", {"request": request})
+        except:
+            pass
+    return HTMLResponse("<h1>Manual Login</h1><p>Form not available</p>")
 async def oauth_login(provider: str, request: Request):
     if provider == 'google' and not os.getenv('GOOGLE_ENABLED', 'true').lower() == 'true':
         raise HTTPException(status_code=400, detail="Google login disabled")

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ZipIt MLOps - Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #0a0a0a; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .container { background: rgba(17, 17, 17, 0.95); padding: 2rem; border-radius: 16px; width: 100%; max-width: 400px; }
+        .logo { font-size: 2rem; font-weight: bold; text-align: center; margin-bottom: 2rem; color: #667eea; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; color: #ccc; }
+        input { width: 100%; padding: 0.75rem; border: 1px solid #333; border-radius: 8px; background: #1a1a1a; color: white; }
+        button { width: 100%; padding: 0.75rem; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 1rem; }
+        button:hover { background: #5a6fd8; }
+        .toggle { text-align: center; margin-top: 1rem; }
+        .toggle a { color: #667eea; text-decoration: none; }
+        .error { color: #ff6b6b; margin-top: 0.5rem; font-size: 0.9rem; }
+        .success { color: #51cf66; margin-top: 0.5rem; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">ZipIt MLOps</div>
+        
+        <div id="login-form">
+            <h3>Login</h3>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="login-username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit">Login</button>
+                <div id="login-error" class="error"></div>
+            </form>
+            <div class="toggle">
+                <a href="#" onclick="showRegister()">Don't have an account? Register</a>
+            </div>
+        </div>
+        
+        <div id="register-form" style="display: none;">
+            <h3>Register</h3>
+            <form onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="reg-fullname" required>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="reg-username" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="reg-email" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="reg-password" required minlength="8">
+                </div>
+                <button type="submit">Register</button>
+                <div id="register-error" class="error"></div>
+                <div id="register-success" class="success"></div>
+            </form>
+            <div class="toggle">
+                <a href="#" onclick="showLogin()">Already have an account? Login</a>
+            </div>
+        </div>
+        
+        <div class="toggle" style="margin-top: 2rem;">
+            <a href="/login">← Back to OAuth login</a>
+        </div>
+    </div>
+
+    <script>
+        function showRegister() {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = 'block';
+        }
+        
+        function showLogin() {
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('login-form').style.display = 'block';
+        }
+        
+        async function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                const response = await fetch('/api/users/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('zipit_token', data.access_token);
+                    window.location.href = '/dashboard';
+                } else {
+                    document.getElementById('login-error').textContent = data.detail || 'Login failed';
+                }
+            } catch (error) {
+                document.getElementById('login-error').textContent = 'Network error. Please try again.';
+            }
+        }
+        
+        async function handleRegister(event) {
+            event.preventDefault();
+            const fullName = document.getElementById('reg-fullname').value;
+            const username = document.getElementById('reg-username').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            
+            try {
+                const response = await fetch('/api/users/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        full_name: fullName,
+                        username, 
+                        email, 
+                        password 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('register-success').textContent = 'Registration successful! Redirecting...';
+                    localStorage.setItem('zipit_token', data.access_token);
+                    setTimeout(() => window.location.href = '/dashboard', 1500);
+                } else {
+                    document.getElementById('register-error').textContent = data.detail || 'Registration failed';
+                }
+            } catch (error) {
+                document.getElementById('register-error').textContent = 'Network error. Please try again.';
+            }
+        }
+    </script>
+</body>
+</html>
