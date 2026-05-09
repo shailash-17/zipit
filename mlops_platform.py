@@ -363,7 +363,7 @@ def create_sample_model(model_type: str):
 # API Routes
 @app.get("/")
 async def root(request: Request):
-    return RedirectResponse(url='/login', status_code=302)
+    return RedirectResponse(url='/dashboard', status_code=302)
 
 @app.get("/health")
 async def health_check():
