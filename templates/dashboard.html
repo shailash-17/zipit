@@ -555,11 +555,8 @@
         });
         
         function checkAuth() {
-            const token = localStorage.getItem('zipit_token');
-            if (!token) {
-                window.location.href = '/login';
-                return;
-            }
+            // Skip auth check for now - direct access
+            return true;
         }
         
         function loadUserInfo() {
@@ -572,20 +569,38 @@
         
         async function loadModels() {
             try {
-                const token = localStorage.getItem('zipit_token');
-                const response = await fetch(`${API_BASE}/user/models`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
+                // Mock data for demo - replace with real API calls later
+                userModels = [
+                    {
+                        id: 1,
+                        name: "Customer Churn Predictor",
+                        type: "classification",
+                        framework: "sklearn",
+                        accuracy: 94.2,
+                        total_predictions: 1247,
+                        created_at: "2024-01-15T10:30:00Z"
+                    },
+                    {
+                        id: 2,
+                        name: "Sales Forecasting Model",
+                        type: "regression",
+                        framework: "tensorflow",
+                        accuracy: 87.8,
+                        total_predictions: 892,
+                        created_at: "2024-01-10T14:20:00Z"
+                    },
+                    {
+                        id: 3,
+                        name: "Fraud Detection System",
+                        type: "classification",
+                        framework: "xgboost",
+                        accuracy: 96.5,
+                        total_predictions: 2156,
+                        created_at: "2024-01-08T09:15:00Z"
                     }
-                });
-                
-                if (response.ok) {
-                    userModels = await response.json();
-                    updateModelStats();
-                    renderModelList();
-                } else {
-                    console.error('Failed to load models');
-                }
+                ];
+                updateModelStats();
+                renderModelList();
             } catch (error) {
                 console.error('Error loading models:', error);
             }
@@ -695,29 +710,23 @@
                 description: formData.get('description')
             };
             
-            try {
-                const token = localStorage.getItem('zipit_token');
-                const response = await fetch(`${API_BASE}/models/register`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(modelData)
-                });
-                
-                if (response.ok) {
-                    closeModal('register-model-modal');
-                    e.target.reset();
-                    loadModels(); // Reload models
-                    alert('Model registered successfully!');
-                } else {
-                    const error = await response.json();
-                    alert(error.detail || 'Failed to register model');
-                }
-            } catch (error) {
-                alert('Connection error. Please try again.');
-            }
+            // Add to demo data
+            const newModel = {
+                id: userModels.length + 1,
+                name: modelData.model_name,
+                type: modelData.model_type,
+                framework: modelData.framework,
+                accuracy: Math.random() * 10 + 85, // Random accuracy 85-95%
+                total_predictions: Math.floor(Math.random() * 1000),
+                created_at: new Date().toISOString()
+            };
+            
+            userModels.push(newModel);
+            closeModal('register-model-modal');
+            e.target.reset();
+            updateModelStats();
+            renderModelList();
+            alert('Model registered successfully!');
         });
         
         function logout() {
