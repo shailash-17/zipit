@@ -608,36 +608,117 @@ async def execute_code(request: dict):
     filename = request.get("filename", "main.py")
     
     try:
-        # Simple code execution simulation
-        output = []
+        import subprocess
+        import tempfile
+        import os
         
-        # Extract print statements
-        import re
-        print_matches = re.findall(r'print\(["\']([^"\']*)["\'\])', code)
-        for match in print_matches:
-            output.append(match)
+        # Create temporary file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(code)
+            temp_file = f.name
         
-        # Simulate model training output
-        if 'accuracy_score' in code:
-            output.append('Model accuracy: 0.943')
+        # Execute Python code
+        result = subprocess.run(
+            ['python', temp_file],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=os.path.dirname(temp_file)
+        )
         
-        if 'joblib.dump' in code or 'pickle.dump' in code:
-            output.append("Model saved successfully")
+        # Clean up
+        os.unlink(temp_file)
         
-        if 'train_test_split' in code:
-            output.append('Data split completed')
+        output = result.stdout
+        if result.stderr:
+            output += "\nErrors:\n" + result.stderr
         
         return {
-            "status": "success",
-            "output": "\n".join(output) if output else "Code executed successfully",
+            "status": "success" if result.returncode == 0 else "error",
+            "output": output or "Code executed successfully",
+            "filename": filename,
+            "return_code": result.returncode
+        }
+        
+    except subprocess.TimeoutExpired:
+        return {
+            "status": "error",
+            "output": "Code execution timed out (30s limit)",
             "filename": filename
         }
     except Exception as e:
         return {
             "status": "error",
-            "output": f"Error: {str(e)}",
+            "output": f"Execution error: {str(e)}",
             "filename": filename
         }
+
+@app.post("/api/workspace/install")
+async def install_package(package: str):
+    try:
+        import subprocess
+        result = subprocess.run(
+            ['pip', 'install', package],
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+        
+        return {
+            "status": "success" if result.returncode == 0 else "error",
+            "output": result.stdout + result.stderr,
+            "package": package
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "output": f"Installation failed: {str(e)}",
+            "package": package
+        }
+
+@app.post("/api/workspace/save-file")
+async def save_file(filename: str, content: str):
+    try:
+        workspace_dir = "workspace"
+        os.makedirs(workspace_dir, exist_ok=True)
+        
+        file_path = os.path.join(workspace_dir, filename)
+        with open(file_path, 'w') as f:
+            f.write(content)
+        
+        return {
+            "status": "success",
+            "message": f"File {filename} saved successfully",
+            "path": file_path
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to save file: {str(e)}"
+        }
+
+@app.get("/api/workspace/files")
+async def list_workspace_files():
+    try:
+        workspace_dir = "workspace"
+        if not os.path.exists(workspace_dir):
+            return {"files": []}
+        
+        files = []
+        for filename in os.listdir(workspace_dir):
+            file_path = os.path.join(workspace_dir, filename)
+            if os.path.isfile(file_path):
+                with open(file_path, 'r') as f:
+                    content = f.read()
+                files.append({
+                    "name": filename,
+                    "content": content,
+                    "size": len(content)
+                })
+        
+        return {"files": files}
+    except Exception as e:
+        return {"error": str(e)}
 async def get_all_models(db: Session = Depends(get_db)):
     models = db.query(MLModel).filter(MLModel.is_active == True).all()
     return [
@@ -845,10 +926,12 @@ async def workspace():
             <div class="logo">🚀 ZipIt ML Workspace</div>
             <div class="toolbar">
                 <button class="btn" onclick="newFile()">New File</button>
-                <button class="btn" onclick="saveFile()">Save</button>
+                <button class="btn" onclick="saveFileToServer()">Save to Server</button>
                 <button class="btn btn-success" onclick="runCode()">Run Code</button>
+                <button class="btn" onclick="installPackage()">Install Package</button>
                 <button class="btn" onclick="uploadModel()">Upload Model</button>
                 <button class="btn" onclick="deployModel()">Deploy</button>
+                <button class="btn" onclick="loadWorkspaceFiles()">Load Files</button>
             </div>
         </div>
         
@@ -953,6 +1036,9 @@ print("Use the 'Deploy' button to upload this model to the platform!")</textarea
                 editor.on('change', function() {
                     files[currentFile] = editor.getValue();
                 });
+                
+                // Load workspace files on startup
+                loadWorkspaceFiles();
             });
             
             function openFile(filename) {
@@ -1024,49 +1110,93 @@ print("Use the 'Deploy' button to upload this model to the platform!")</textarea
             
             async function runCode() {
                 const code = editor.getValue();
-                addOutput('🚀 Running code...', 'info');
+                addOutput('🚀 Executing Python code...', 'info');
                 
                 try {
-                    // Simulate code execution
                     const response = await fetch('/api/workspace/execute', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ code: code, filename: currentFile })
                     });
                     
-                    if (response.ok) {
-                        const result = await response.json();
-                        addOutput(result.output || 'Code executed successfully!', 'success');
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        addOutput(result.output, 'success');
                     } else {
-                        // Fallback simulation
-                        simulateExecution(code);
+                        addOutput(result.output, 'error');
                     }
                 } catch (error) {
-                    // Fallback simulation
-                    simulateExecution(code);
+                    addOutput(`Connection error: ${error.message}`, 'error');
                 }
             }
             
-            function simulateExecution(code) {
-                if (code.includes('print')) {
-                    const printMatches = code.match(/print\(["'`]([^"'`]*)["'`]\)/g);
-                    if (printMatches) {
-                        printMatches.forEach(match => {
-                            const text = match.match(/["'`]([^"'`]*)["'`]/)[1];
-                            addOutput(text, 'output');
-                        });
+            async function installPackage() {
+                const packageName = prompt('Enter package name to install:', 'numpy');
+                if (!packageName) return;
+                
+                addOutput(`📦 Installing ${packageName}...`, 'info');
+                
+                try {
+                    const response = await fetch('/api/workspace/install', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ package: packageName })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        addOutput(`✅ ${packageName} installed successfully`, 'success');
+                    } else {
+                        addOutput(result.output, 'error');
                     }
+                } catch (error) {
+                    addOutput(`Installation error: ${error.message}`, 'error');
+                }
+            }
+            
+            async function saveFileToServer() {
+                if (editor) {
+                    files[currentFile] = editor.getValue();
                 }
                 
-                if (code.includes('accuracy_score')) {
-                    addOutput('Model accuracy: 0.943', 'output');
+                try {
+                    const response = await fetch('/api/workspace/save-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            filename: currentFile, 
+                            content: files[currentFile] 
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        addOutput(`💾 ${currentFile} saved to server`, 'success');
+                    } else {
+                        addOutput(result.message, 'error');
+                    }
+                } catch (error) {
+                    addOutput(`Save error: ${error.message}`, 'error');
                 }
-                
-                if (code.includes('joblib.dump')) {
-                    addOutput("Model saved as 'trained_model.joblib'", 'output');
+            }
+            
+            async function loadWorkspaceFiles() {
+                try {
+                    const response = await fetch('/api/workspace/files');
+                    const result = await response.json();
+                    
+                    if (result.files) {
+                        result.files.forEach(file => {
+                            files[file.name] = file.content;
+                        });
+                        addOutput(`📁 Loaded ${result.files.length} files from workspace`, 'info');
+                    }
+                } catch (error) {
+                    addOutput(`Load error: ${error.message}`, 'error');
                 }
-                
-                addOutput('✅ Execution completed!', 'success');
             }
             
             function uploadModel() {
