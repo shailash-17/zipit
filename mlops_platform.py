@@ -611,39 +611,46 @@ async def execute_code(request: dict):
         import subprocess
         import tempfile
         import os
+        import sys
         
-        # Create temporary file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        # Create workspace directory
+        workspace_dir = "workspace"
+        os.makedirs(workspace_dir, exist_ok=True)
+        
+        # Write code to file in workspace
+        file_path = os.path.join(workspace_dir, filename)
+        with open(file_path, 'w') as f:
             f.write(code)
-            temp_file = f.name
         
-        # Execute Python code
+        # Execute with proper Python path
+        env = os.environ.copy()
+        env['PYTHONPATH'] = workspace_dir
+        
         result = subprocess.run(
-            ['python', temp_file],
+            [sys.executable, file_path],
             capture_output=True,
             text=True,
-            timeout=30,
-            cwd=os.path.dirname(temp_file)
+            timeout=60,
+            cwd=workspace_dir,
+            env=env
         )
-        
-        # Clean up
-        os.unlink(temp_file)
         
         output = result.stdout
         if result.stderr:
-            output += "\nErrors:\n" + result.stderr
+            output += "\nSTDERR:\n" + result.stderr
         
         return {
             "status": "success" if result.returncode == 0 else "error",
-            "output": output or "Code executed successfully",
+            "output": output or "Code executed (no output)",
             "filename": filename,
-            "return_code": result.returncode
+            "return_code": result.returncode,
+            "working_directory": workspace_dir
         }
         
     except subprocess.TimeoutExpired:
         return {
             "status": "error",
-            "output": "Code execution timed out (30s limit)",
+            "output": "Code execution timed out (60s limit)",
             "filename": filename
         }
     except Exception as e:
@@ -654,19 +661,29 @@ async def execute_code(request: dict):
         }
 
 @app.post("/api/workspace/install")
-async def install_package(package: str):
+async def install_package(request: dict):
+    package = request.get("package", "")
     try:
         import subprocess
+        import sys
+        
         result = subprocess.run(
-            ['pip', 'install', package],
+            [sys.executable, '-m', 'pip', 'install', package],
             capture_output=True,
             text=True,
-            timeout=120
+            timeout=300
         )
         
         return {
             "status": "success" if result.returncode == 0 else "error",
             "output": result.stdout + result.stderr,
+            "package": package,
+            "return_code": result.returncode
+        }
+    except subprocess.TimeoutExpired:
+        return {
+            "status": "error",
+            "output": f"Package installation timed out: {package}",
             "package": package
         }
     except Exception as e:
@@ -677,24 +694,29 @@ async def install_package(package: str):
         }
 
 @app.post("/api/workspace/save-file")
-async def save_file(filename: str, content: str):
+async def save_file(request: dict):
+    filename = request.get("filename", "")
+    content = request.get("content", "")
+    
     try:
         workspace_dir = "workspace"
         os.makedirs(workspace_dir, exist_ok=True)
         
         file_path = os.path.join(workspace_dir, filename)
-        with open(file_path, 'w') as f:
+        with open(file_path, 'w', encoding='utf-8') as f:
             f.write(content)
         
         return {
             "status": "success",
             "message": f"File {filename} saved successfully",
-            "path": file_path
+            "path": file_path,
+            "size": len(content)
         }
     except Exception as e:
         return {
             "status": "error",
-            "message": f"Failed to save file: {str(e)}"
+            "message": f"Failed to save file: {str(e)}",
+            "filename": filename
         }
 
 @app.get("/api/workspace/files")
@@ -708,17 +730,61 @@ async def list_workspace_files():
         for filename in os.listdir(workspace_dir):
             file_path = os.path.join(workspace_dir, filename)
             if os.path.isfile(file_path):
-                with open(file_path, 'r') as f:
-                    content = f.read()
-                files.append({
-                    "name": filename,
-                    "content": content,
-                    "size": len(content)
-                })
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    files.append({
+                        "name": filename,
+                        "content": content,
+                        "size": len(content),
+                        "modified": os.path.getmtime(file_path)
+                    })
+                except Exception as e:
+                    files.append({
+                        "name": filename,
+                        "content": f"# Error reading file: {str(e)}",
+                        "size": 0,
+                        "error": str(e)
+                    })
         
-        return {"files": files}
+        return {"files": files, "workspace_dir": workspace_dir}
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": str(e), "files": []}
+
+@app.post("/api/workspace/run-shell")
+async def run_shell_command(request: dict):
+    command = request.get("command", "")
+    
+    try:
+        import subprocess
+        import shlex
+        
+        workspace_dir = "workspace"
+        os.makedirs(workspace_dir, exist_ok=True)
+        
+        # Parse command safely
+        cmd_parts = shlex.split(command)
+        
+        result = subprocess.run(
+            cmd_parts,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=workspace_dir
+        )
+        
+        return {
+            "status": "success" if result.returncode == 0 else "error",
+            "output": result.stdout + result.stderr,
+            "command": command,
+            "return_code": result.returncode
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "output": f"Command failed: {str(e)}",
+            "command": command
+        }
 async def get_all_models(db: Session = Depends(get_db)):
     models = db.query(MLModel).filter(MLModel.is_active == True).all()
     return [
@@ -926,12 +992,12 @@ async def workspace():
             <div class="logo">🚀 ZipIt ML Workspace</div>
             <div class="toolbar">
                 <button class="btn" onclick="newFile()">New File</button>
-                <button class="btn" onclick="saveFileToServer()">Save to Server</button>
+                <button class="btn" onclick="saveFileToServer()">Save</button>
                 <button class="btn btn-success" onclick="runCode()">Run Code</button>
                 <button class="btn" onclick="installPackage()">Install Package</button>
+                <button class="btn" onclick="runShellCommand()">Terminal</button>
                 <button class="btn" onclick="uploadModel()">Upload Model</button>
-                <button class="btn" onclick="deployModel()">Deploy</button>
-                <button class="btn" onclick="loadWorkspaceFiles()">Load Files</button>
+                <button class="btn" onclick="loadWorkspaceFiles()">Refresh Files</button>
             </div>
         </div>
         
@@ -1112,6 +1178,9 @@ print("Use the 'Deploy' button to upload this model to the platform!")</textarea
                 const code = editor.getValue();
                 addOutput('🚀 Executing Python code...', 'info');
                 
+                // Save file first
+                await saveFileToServer();
+                
                 try {
                     const response = await fetch('/api/workspace/execute', {
                         method: 'POST',
@@ -1122,17 +1191,23 @@ print("Use the 'Deploy' button to upload this model to the platform!")</textarea
                     const result = await response.json();
                     
                     if (result.status === 'success') {
-                        addOutput(result.output, 'success');
+                        addOutput('--- OUTPUT ---', 'info');
+                        addOutput(result.output, 'output');
+                        addOutput('--- END OUTPUT ---', 'info');
                     } else {
+                        addOutput('--- ERROR ---', 'error');
                         addOutput(result.output, 'error');
+                        addOutput('--- END ERROR ---', 'error');
                     }
+                    
+                    addOutput(`Exit code: ${result.return_code || 0}`, 'info');
                 } catch (error) {
                     addOutput(`Connection error: ${error.message}`, 'error');
                 }
             }
             
             async function installPackage() {
-                const packageName = prompt('Enter package name to install:', 'numpy');
+                const packageName = prompt('Enter package name to install:', 'numpy pandas scikit-learn');
                 if (!packageName) return;
                 
                 addOutput(`📦 Installing ${packageName}...`, 'info');
@@ -1148,11 +1223,38 @@ print("Use the 'Deploy' button to upload this model to the platform!")</textarea
                     
                     if (result.status === 'success') {
                         addOutput(`✅ ${packageName} installed successfully`, 'success');
+                        addOutput(result.output, 'output');
                     } else {
+                        addOutput(`❌ Installation failed:`, 'error');
                         addOutput(result.output, 'error');
                     }
                 } catch (error) {
                     addOutput(`Installation error: ${error.message}`, 'error');
+                }
+            }
+            
+            async function runShellCommand() {
+                const command = prompt('Enter shell command:', 'ls -la');
+                if (!command) return;
+                
+                addOutput(`$ ${command}`, 'info');
+                
+                try {
+                    const response = await fetch('/api/workspace/run-shell', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: command })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        addOutput(result.output, 'output');
+                    } else {
+                        addOutput(result.output, 'error');
+                    }
+                } catch (error) {
+                    addOutput(`Command error: ${error.message}`, 'error');
                 }
             }
             
