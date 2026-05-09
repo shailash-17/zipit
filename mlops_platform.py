@@ -646,7 +646,7 @@ async def login_page(request: Request):
 async def dashboard(request: Request):
     if templates_dir.exists():
         try:
-            return templates.TemplateResponse("dashboard.html", {"request": request})
+            return templates.TemplateResponse("working-dashboard.html", {"request": request})
         except:
             pass
     return HTMLResponse("<h1>ZipIt MLOps Dashboard</h1><p>API at <a href='/docs'>/docs</a></p>")
