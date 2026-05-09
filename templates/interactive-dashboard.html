@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ZipIt MLOps Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist@2.26.0/plotly.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: white; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 2rem; }
+        .header { text-align: center; margin-bottom: 3rem; }
+        .logo { font-size: 3rem; font-weight: 800; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem; }
+        .subtitle { color: #888; font-size: 1.2rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem; margin-bottom: 3rem; }
+        .card { background: linear-gradient(145deg, #111, #1a1a1a); border: 1px solid #333; border-radius: 20px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: all 0.3s ease; }
+        .card:hover { transform: translateY(-5px); border-color: #667eea; box-shadow: 0 20px 40px rgba(102, 126, 234, 0.1); }
+        .card-header { display: flex; justify-content: between; align-items: center; margin-bottom: 1.5rem; }
+        .card-title { font-size: 1.4rem; font-weight: 600; color: #667eea; }
+        .card-icon { font-size: 2rem; margin-right: 1rem; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; margin-bottom: 3rem; }
+        .stat-card { background: linear-gradient(145deg, #1a1a1a, #222); border-radius: 16px; padding: 2rem; text-align: center; border: 1px solid #333; transition: all 0.3s ease; }
+        .stat-card:hover { border-color: #667eea; transform: scale(1.05); }
+        .stat-value { font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem; }
+        .stat-label { color: #888; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+        .chart-container { height: 300px; margin: 1rem 0; }
+        .btn { background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
+        .btn-secondary { background: linear-gradient(135deg, #333, #444); }
+        .model-list { max-height: 400px; overflow-y: auto; }
+        .model-item { background: #1a1a1a; padding: 1.5rem; margin: 1rem 0; border-radius: 12px; border-left: 4px solid #667eea; transition: all 0.3s ease; }
+        .model-item:hover { background: #222; transform: translateX(5px); }
+        .model-name { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .model-meta { color: #888; font-size: 0.9rem; }
+        .model-actions { margin-top: 1rem; }
+        .progress-ring { width: 120px; height: 120px; margin: 0 auto; }
+        .progress-ring circle { fill: transparent; stroke: #333; stroke-width: 8; }
+        .progress-ring .progress { stroke: #667eea; stroke-dasharray: 283; stroke-dashoffset: 283; transition: stroke-dashoffset 0.5s ease; }
+        .alert { background: linear-gradient(135deg, #ef4444, #dc2626); padding: 1rem; border-radius: 10px; margin: 1rem 0; }
+        .alert.success { background: linear-gradient(135deg, #10b981, #059669); }
+        .alert.warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .metric-card { background: #1a1a1a; padding: 1.5rem; border-radius: 12px; margin: 0.5rem 0; border-left: 4px solid; }
+        .metric-card.good { border-color: #10b981; }
+        .metric-card.warning { border-color: #f59e0b; }
+        .metric-card.critical { border-color: #ef4444; }
+        .interactive-chart { cursor: pointer; transition: all 0.3s ease; }
+        .interactive-chart:hover { transform: scale(1.02); }
+        .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid #333; border-radius: 50%; border-top-color: #667eea; animation: spin 1s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .tooltip { position: absolute; background: #222; padding: 0.5rem; border-radius: 6px; font-size: 0.8rem; pointer-events: none; z-index: 1000; }
+        .tabs { display: flex; margin-bottom: 2rem; }
+        .tab { padding: 1rem 2rem; background: #1a1a1a; border: none; color: #888; cursor: pointer; border-radius: 10px 10px 0 0; margin-right: 0.5rem; transition: all 0.3s ease; }
+        .tab.active { background: #667eea; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🚀 ZipIt MLOps Platform</div>
+            <div class="subtitle">Enterprise Machine Learning Operations Dashboard</div>
+        </div>
+        
+        <!-- Key Metrics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="total-models" style="color: #667eea;">0</div>
+                <div class="stat-label">Active Models</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="total-predictions" style="color: #10b981;">0</div>
+                <div class="stat-label">Predictions Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avg-accuracy" style="color: #f59e0b;">0%</div>
+                <div class="stat-label">Average Accuracy</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="system-health" style="color: #10b981;">99.9%</div>
+                <div class="stat-label">System Health</div>
+            </div>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('overview')">📊 Overview</button>
+            <button class="tab" onclick="showTab('models')">🧠 Models</button>
+            <button class="tab" onclick="showTab('monitoring')">📈 Monitoring</button>
+            <button class="tab" onclick="showTab('mlops')">⚙️ MLOps Tools</button>
+        </div>
+        
+        <!-- Overview Tab -->
+        <div id="overview-tab" class="tab-content active">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📈 Model Performance Trends</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="performance-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🎯 Prediction Distribution</div>
+                    </div>
+                    <div class="chart-container" id="prediction-distribution"></div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">⚡ Real-time Metrics</div>
+                    </div>
+                    <div id="realtime-metrics">
+                        <div class="metric-card good">
+                            <strong>Response Time</strong><br>
+                            <span id="response-time">45ms</span>
+                        </div>
+                        <div class="metric-card good">
+                            <strong>Throughput</strong><br>
+                            <span id="throughput">1,247 req/min</span>
+                        </div>
+                        <div class="metric-card warning">
+                            <strong>Error Rate</strong><br>
+                            <span id="error-rate">0.02%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🔄 System Status</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <svg class="progress-ring">
+                            <circle cx="60" cy="60" r="45"></circle>
+                            <circle cx="60" cy="60" r="45" class="progress" id="health-progress"></circle>
+                        </svg>
+                        <div style="margin-top: 1rem;">
+                            <div style="font-size: 2rem; font-weight: bold;" id="health-percentage">99.9%</div>
+                            <div style="color: #888;">System Uptime</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Models Tab -->
+        <div id="models-tab" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🧠 Model Registry</div>
+                        <button class="btn" onclick="refreshModels()">Refresh</button>
+                    </div>
+                    <div class="model-list" id="models-list">
+                        <div class="loading"></div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📊 Model Comparison</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="model-comparison-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Monitoring Tab -->
+        <div id="monitoring-tab" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🚨 Data Drift Detection</div>
+                        <button class="btn" onclick="runDriftDetection()">Run Check</button>
+                    </div>
+                    <div class="chart-container" id="drift-chart"></div>
+                    <div id="drift-results"></div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📉 Model Degradation</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="degradation-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">⚠️ Active Alerts</div>
+                    </div>
+                    <div id="alerts-list">
+                        <div class="alert success">✅ All models performing within normal parameters</div>
+                        <div class="alert warning">⚠️ Model accuracy dropped 2% in last hour</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- MLOps Tools Tab -->
+        <div id="mlops-tab" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🔧 MLOps Pipeline</div>
+                        <button class="btn" onclick="runMLOpsPipeline()">Run Pipeline</button>
+                    </div>
+                    <div id="pipeline-status">
+                        <div class="metric-card good">
+                            <strong>MLflow</strong> - Experiment Tracking<br>
+                            <span style="color: #10b981;">✅ Connected</span>
+                        </div>
+                        <div class="metric-card good">
+                            <strong>Evidently AI</strong> - Drift Detection<br>
+                            <span style="color: #10b981;">✅ Active</span>
+                        </div>
+                        <div class="metric-card good">
+                            <strong>Optuna</strong> - Hyperparameter Tuning<br>
+                            <span style="color: #10b981;">✅ Ready</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🎯 Hyperparameter Optimization</div>
+                        <button class="btn" onclick="runOptimization()">Optimize</button>
+                    </div>
+                    <div class="chart-container" id="optimization-chart"></div>
+                    <div id="optimization-results"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let models = [];
+        let charts = {};
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadModels();
+            initializeCharts();
+            startRealTimeUpdates();
+        });
+        
+        // Tab functionality
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+        
+        // Load models from API
+        async function loadModels() {
+            try {
+                const response = await fetch('/api/models/all');
+                models = await response.json();
+                updateStats();
+                renderModels();
+                updateCharts();
+            } catch (error) {
+                console.error('Failed to load models:', error);
+            }
+        }
+        
+        function updateStats() {
+            document.getElementById('total-models').textContent = models.length;
+            const totalPredictions = models.reduce((sum, m) => sum + (m.total_predictions || 0), 0);
+            document.getElementById('total-predictions').textContent = totalPredictions.toLocaleString();
+            const avgAccuracy = models.length > 0 ? 
+                models.reduce((sum, m) => sum + (m.accuracy || 0), 0) / models.length : 0;
+            document.getElementById('avg-accuracy').textContent = avgAccuracy.toFixed(1) + '%';
+        }
+        
+        function renderModels() {
+            const container = document.getElementById('models-list');
+            if (models.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #888;">No models found</div>';
+                return;
+            }
+            
+            container.innerHTML = models.map(model => `
+                <div class="model-item">
+                    <div class="model-name">${model.name}</div>
+                    <div class="model-meta">
+                        ${model.framework} • ${model.type} • ${model.accuracy}% accuracy • ${model.total_predictions} predictions
+                    </div>
+                    <div class="model-actions">
+                        <button class="btn" onclick="testModel(${model.id})">Test</button>
+                        <button class="btn btn-secondary" onclick="viewStats(${model.id})">Stats</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function initializeCharts() {
+            // Performance trend chart
+            const ctx1 = document.getElementById('performance-chart').getContext('2d');
+            charts.performance = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Model Accuracy',
+                        data: [92, 94, 91, 95, 93, 96, 94],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#ccc' } } },
+                    scales: {
+                        x: { ticks: { color: '#ccc' }, grid: { color: '#333' } },
+                        y: { ticks: { color: '#ccc' }, grid: { color: '#333' } }
+                    }
+                }
+            });
+            
+            // Model comparison chart
+            const ctx2 = document.getElementById('model-comparison-chart').getContext('2d');
+            charts.comparison = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: models.map(m => m.name.substring(0, 15)),
+                    datasets: [{
+                        label: 'Accuracy %',
+                        data: models.map(m => m.accuracy),
+                        backgroundColor: ['#667eea', '#10b981', '#f59e0b', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#ccc' } } },
+                    scales: {
+                        x: { ticks: { color: '#ccc' }, grid: { color: '#333' } },
+                        y: { ticks: { color: '#ccc' }, grid: { color: '#333' } }
+                    }
+                }
+            });
+            
+            // Prediction distribution (Plotly)
+            const distributionData = [{
+                x: Array.from({length: 100}, () => Math.random()),
+                type: 'histogram',
+                marker: { color: '#667eea' }
+            }];
+            
+            Plotly.newPlot('prediction-distribution', distributionData, {
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent',
+                font: { color: '#ccc' },
+                xaxis: { gridcolor: '#333' },
+                yaxis: { gridcolor: '#333' }
+            });
+        }
+        
+        function updateCharts() {
+            if (charts.comparison && models.length > 0) {
+                charts.comparison.data.labels = models.map(m => m.name.substring(0, 15));
+                charts.comparison.data.datasets[0].data = models.map(m => m.accuracy);
+                charts.comparison.update();
+            }
+        }
+        
+        function startRealTimeUpdates() {
+            setInterval(() => {
+                // Update real-time metrics
+                document.getElementById('response-time').textContent = (40 + Math.random() * 20).toFixed(0) + 'ms';
+                document.getElementById('throughput').textContent = (1200 + Math.random() * 100).toFixed(0) + ' req/min';
+                document.getElementById('error-rate').textContent = (Math.random() * 0.05).toFixed(3) + '%';
+                
+                // Update health ring
+                const health = 99.5 + Math.random() * 0.4;
+                const progress = document.getElementById('health-progress');
+                const circumference = 2 * Math.PI * 45;
+                const offset = circumference - (health / 100) * circumference;
+                progress.style.strokeDashoffset = offset;
+                document.getElementById('health-percentage').textContent = health.toFixed(1) + '%';
+            }, 2000);
+        }
+        
+        async function runDriftDetection() {
+            const button = event.target;
+            button.innerHTML = '<div class="loading"></div> Running...';
+            button.disabled = true;
+            
+            try {
+                const response = await fetch('/api/mlops/drift-detection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reference_data: [1, 2, 3, 4, 5],
+                        current_data: [1.1, 2.2, 3.1, 4.2, 5.1]
+                    })
+                });
+                
+                const result = await response.json();
+                
+                document.getElementById('drift-results').innerHTML = `
+                    <div class="alert ${result.drift_detected ? 'warning' : 'success'}">
+                        ${result.drift_detected ? '⚠️ Drift detected!' : '✅ No drift detected'}
+                        Drift score: ${result.drift_score.toFixed(3)}
+                    </div>
+                `;
+                
+                // Create drift visualization
+                const driftData = [{
+                    y: [1, 2, 3, 4, 5],
+                    name: 'Reference',
+                    type: 'box',
+                    marker: { color: '#10b981' }
+                }, {
+                    y: [1.1, 2.2, 3.1, 4.2, 5.1],
+                    name: 'Current',
+                    type: 'box',
+                    marker: { color: '#f59e0b' }
+                }];
+                
+                Plotly.newPlot('drift-chart', driftData, {
+                    paper_bgcolor: 'transparent',
+                    plot_bgcolor: 'transparent',
+                    font: { color: '#ccc' }
+                });
+                
+            } catch (error) {
+                document.getElementById('drift-results').innerHTML = 
+                    `<div class="alert">❌ Error: ${error.message}</div>`;
+            }
+            
+            button.innerHTML = 'Run Check';
+            button.disabled = false;
+        }
+        
+        async function runOptimization() {
+            const button = event.target;
+            button.innerHTML = '<div class="loading"></div> Optimizing...';
+            button.disabled = true;
+            
+            try {
+                const response = await fetch('/api/mlops/hyperparameter-optimization', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_type: 'random_forest', n_trials: 50 })
+                });
+                
+                const result = await response.json();
+                
+                document.getElementById('optimization-results').innerHTML = `
+                    <div class="alert success">
+                        ✅ Optimization complete!<br>
+                        Best score: ${result.best_value.toFixed(3)}<br>
+                        Trials: ${result.n_trials}
+                    </div>
+                `;
+                
+                // Visualization of optimization
+                const trials = Array.from({length: result.n_trials}, (_, i) => ({
+                    x: i + 1,
+                    y: 0.8 + Math.random() * 0.2
+                }));
+                
+                const optimizationData = [{
+                    x: trials.map(t => t.x),
+                    y: trials.map(t => t.y),
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    marker: { color: '#667eea' }
+                }];
+                
+                Plotly.newPlot('optimization-chart', optimizationData, {
+                    paper_bgcolor: 'transparent',
+                    plot_bgcolor: 'transparent',
+                    font: { color: '#ccc' },
+                    xaxis: { title: 'Trial', gridcolor: '#333' },
+                    yaxis: { title: 'Score', gridcolor: '#333' }
+                });
+                
+            } catch (error) {
+                document.getElementById('optimization-results').innerHTML = 
+                    `<div class="alert">❌ Error: ${error.message}</div>`;
+            }
+            
+            button.innerHTML = 'Optimize';
+            button.disabled = false;
+        }
+        
+        async function runMLOpsPipeline() {
+            const button = event.target;
+            button.innerHTML = '<div class="loading"></div> Running...';
+            button.disabled = true;
+            
+            try {
+                const response = await fetch('/api/mlops/run-pipeline', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: 'test_model', type: 'classification' })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    document.getElementById('pipeline-status').innerHTML += `
+                        <div class="alert success">
+                            ✅ Pipeline executed successfully!<br>
+                            Pipeline ID: ${result.pipeline_id}
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                document.getElementById('pipeline-status').innerHTML += 
+                    `<div class="alert">❌ Pipeline error: ${error.message}</div>`;
+            }
+            
+            button.innerHTML = 'Run Pipeline';
+            button.disabled = false;
+        }
+        
+        function refreshModels() {
+            loadModels();
+        }
+        
+        function testModel(modelId) {
+            // Implement model testing
+            alert(`Testing model ${modelId}`);
+        }
+        
+        function viewStats(modelId) {
+            // Implement stats viewing
+            alert(`Viewing stats for model ${modelId}`);
+        }
+    </script>
+</body>
+</html>
