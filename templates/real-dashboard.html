@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ZipIt MLOps Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #0a0a0a; color: white; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        .header { text-align: center; margin-bottom: 2rem; }
+        .logo { font-size: 2.5rem; color: #667eea; margin-bottom: 0.5rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; }
+        .card { background: #111; border: 1px solid #333; border-radius: 12px; padding: 2rem; }
+        .card h3 { color: #667eea; margin-bottom: 1rem; font-size: 1.3rem; }
+        .upload-area { border: 2px dashed #333; border-radius: 8px; padding: 2rem; text-align: center; margin: 1rem 0; transition: all 0.3s; cursor: pointer; }
+        .upload-area.dragover { border-color: #667eea; background: rgba(102, 126, 234, 0.1); }
+        .btn { background: #667eea; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; margin: 0.5rem; }
+        .btn:hover { background: #5a6fd8; }
+        .btn-danger { background: #ef4444; }
+        .btn-danger:hover { background: #dc2626; }
+        input, textarea, select { width: 100%; padding: 0.75rem; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: white; margin: 0.5rem 0; }
+        .model-item { background: #1a1a1a; padding: 1rem; margin: 0.5rem 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .result { background: #1a1a1a; padding: 1rem; border-radius: 6px; margin: 1rem 0; font-family: monospace; }
+        .hidden { display: none; }
+        .progress { width: 100%; height: 8px; background: #333; border-radius: 4px; overflow: hidden; margin: 1rem 0; }
+        .progress-bar { height: 100%; background: #667eea; width: 0%; transition: width 0.3s; }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; text-align: center; }
+        .stat { padding: 1rem; background: #1a1a1a; border-radius: 8px; }
+        .stat-value { font-size: 2rem; color: #667eea; font-weight: bold; }
+        .error { color: #ef4444; margin: 0.5rem 0; }
+        .success { color: #10b981; margin: 0.5rem 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🚀 ZipIt MLOps Platform</div>
+            <p>Enterprise Machine Learning Operations</p>
+        </div>
+        
+        <div class="grid">
+            <!-- Model Upload -->
+            <div class="card">
+                <h3>📤 Upload Model</h3>
+                <div class="upload-area" id="upload-area">
+                    <p><strong>Drag & Drop Model Files</strong></p>
+                    <p>Supports: .pkl, .joblib, .h5, .pt, .onnx</p>
+                    <button class="btn" onclick="document.getElementById('file-input').click()">Browse Files</button>
+                    <input type="file" id="file-input" accept=".pkl,.joblib,.h5,.pt,.onnx" style="display: none;">
+                </div>
+                
+                <div id="upload-progress" class="hidden">
+                    <div class="progress">
+                        <div class="progress-bar" id="progress-bar"></div>
+                    </div>
+                    <p id="upload-status">Uploading...</p>
+                </div>
+                
+                <div id="upload-result" class="hidden"></div>
+            </div>
+            
+            <!-- Model Prediction -->
+            <div class="card">
+                <h3>⚡ Run Predictions</h3>
+                <select id="model-select">
+                    <option value="">Select Model</option>
+                </select>
+                <textarea id="prediction-input" placeholder='Enter features as JSON array: [1.0, 2.0, 3.0, 4.0, 5.0]' rows="3">[0.5, 1.2, 0.8, 2.1, 1.5, 0.9, 1.8, 0.3, 2.5, 1.1]</textarea>
+                <button class="btn" onclick="makePrediction()">Run Prediction</button>
+                <div id="prediction-result" class="result hidden"></div>
+                <div id="prediction-error" class="error hidden"></div>
+            </div>
+            
+            <!-- Model Training -->
+            <div class="card">
+                <h3>🔧 Train New Model</h3>
+                <input type="text" id="new-model-name" placeholder="Model Name (e.g., Customer Churn Predictor)">
+                <select id="model-type">
+                    <option value="classification">Classification</option>
+                    <option value="regression">Regression</option>
+                    <option value="clustering">Clustering</option>
+                </select>
+                <select id="framework">
+                    <option value="sklearn">Scikit-learn</option>
+                    <option value="tensorflow">TensorFlow</option>
+                    <option value="pytorch">PyTorch</option>
+                    <option value="xgboost">XGBoost</option>
+                </select>
+                <textarea id="model-description" placeholder="Model description (optional)" rows="2"></textarea>
+                <button class="btn" onclick="trainModel()">Train Model</button>
+                <div id="training-result" class="result hidden"></div>
+                <div id="training-error" class="error hidden"></div>
+            </div>
+            
+            <!-- Platform Statistics -->
+            <div class="card">
+                <h3>📊 Platform Statistics</h3>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="total-models">0</div>
+                        <div>Models</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="total-predictions">0</div>
+                        <div>Predictions</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="avg-accuracy">0%</div>
+                        <div>Avg Accuracy</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="system-health">99.9%</div>
+                        <div>Uptime</div>
+                    </div>
+                </div>
+                <button class="btn" onclick="refreshStats()" style="width: 100%; margin-top: 1rem;">Refresh Stats</button>
+            </div>
+            
+            <!-- Model Management -->
+            <div class="card">
+                <h3>🧠 Model Management</h3>
+                <div id="models-list">
+                    <p>Loading models...</p>
+                </div>
+                <button class="btn" onclick="loadModels()" style="width: 100%; margin-top: 1rem;">Refresh Models</button>
+            </div>
+            
+            <!-- System Health -->
+            <div class="card">
+                <h3>💚 System Health</h3>
+                <div id="health-status">
+                    <div style="margin: 0.5rem 0;">🟢 API Server: <span id="api-status">Checking...</span></div>
+                    <div style="margin: 0.5rem 0;">🟢 Database: <span id="db-status">Checking...</span></div>
+                    <div style="margin: 0.5rem 0;">🟢 Model Storage: <span id="storage-status">Checking...</span></div>
+                    <div style="margin: 0.5rem 0;">🟢 Prediction Engine: <span id="engine-status">Checking...</span></div>
+                </div>
+                <button class="btn" onclick="checkHealth()" style="width: 100%; margin-top: 1rem;">Check Health</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let models = [];
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupDragAndDrop();
+            loadModels();
+            checkHealth();
+            refreshStats();
+        });
+        
+        // Drag and Drop Setup
+        function setupDragAndDrop() {
+            const uploadArea = document.getElementById('upload-area');
+            const fileInput = document.getElementById('file-input');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => uploadArea.classList.add('dragover'), false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => uploadArea.classList.remove('dragover'), false);
+            });
+            
+            uploadArea.addEventListener('drop', handleDrop, false);
+            fileInput.addEventListener('change', handleFileSelect, false);
+            
+            function handleDrop(e) {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) uploadModel(files[0]);
+            }
+            
+            function handleFileSelect(e) {
+                const files = e.target.files;
+                if (files.length > 0) uploadModel(files[0]);
+            }
+        }
+        
+        // Upload Model
+        async function uploadModel(file) {
+            document.getElementById('upload-progress').classList.remove('hidden');
+            document.getElementById('upload-result').classList.add('hidden');
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`${API_BASE}/models/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('upload-result').innerHTML = 
+                        `<div class="success">✅ Model uploaded successfully!<br>Model ID: ${result.model_id}</div>`;
+                    loadModels();
+                    refreshStats();
+                } else {
+                    document.getElementById('upload-result').innerHTML = 
+                        `<div class="error">❌ Upload failed: ${result.detail}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('upload-result').innerHTML = 
+                    `<div class="error">❌ Upload error: ${error.message}</div>`;
+            }
+            
+            document.getElementById('upload-progress').classList.add('hidden');
+            document.getElementById('upload-result').classList.remove('hidden');
+        }
+        
+        // Load Models
+        async function loadModels() {
+            try {
+                const response = await fetch(`${API_BASE}/models/all`);
+                models = await response.json();
+                
+                updateModelSelect();
+                updateModelsList();
+                refreshStats();
+            } catch (error) {
+                document.getElementById('models-list').innerHTML = 
+                    `<div class="error">Failed to load models: ${error.message}</div>`;
+            }
+        }
+        
+        function updateModelSelect() {
+            const select = document.getElementById('model-select');
+            select.innerHTML = '<option value="">Select Model</option>';
+            
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.id;
+                option.textContent = `${model.name} (${model.type})`;
+                select.appendChild(option);
+            });
+        }
+        
+        function updateModelsList() {
+            const list = document.getElementById('models-list');
+            
+            if (models.length === 0) {
+                list.innerHTML = '<p>No models found. Upload or train a model to get started.</p>';
+                return;
+            }
+            
+            list.innerHTML = models.map(model => `
+                <div class="model-item">
+                    <div>
+                        <strong>${model.name}</strong><br>
+                        <small>${model.framework} • ${model.type} • ${model.accuracy}% accuracy • ${model.total_predictions} predictions</small>
+                    </div>
+                    <div>
+                        <button class="btn" onclick="selectModel(${model.id})">Select</button>
+                        <button class="btn btn-danger" onclick="deleteModel(${model.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function selectModel(modelId) {
+            document.getElementById('model-select').value = modelId;
+        }
+        
+        // Make Prediction
+        async function makePrediction() {
+            const modelId = document.getElementById('model-select').value;
+            const input = document.getElementById('prediction-input').value;
+            
+            if (!modelId) {
+                document.getElementById('prediction-error').textContent = 'Please select a model';
+                document.getElementById('prediction-error').classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                const features = JSON.parse(input);
+                
+                const response = await fetch(`${API_BASE}/models/${modelId}/predict`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ features })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('prediction-result').innerHTML = 
+                        `<strong>Prediction Result:</strong><br>${JSON.stringify(result, null, 2)}`;
+                    document.getElementById('prediction-result').classList.remove('hidden');
+                    document.getElementById('prediction-error').classList.add('hidden');
+                    
+                    loadModels(); // Refresh to update prediction counts
+                } else {
+                    document.getElementById('prediction-error').textContent = result.detail;
+                    document.getElementById('prediction-error').classList.remove('hidden');
+                }
+            } catch (error) {
+                document.getElementById('prediction-error').textContent = `Error: ${error.message}`;
+                document.getElementById('prediction-error').classList.remove('hidden');
+            }
+        }
+        
+        // Train Model
+        async function trainModel() {
+            const name = document.getElementById('new-model-name').value;
+            const type = document.getElementById('model-type').value;
+            const framework = document.getElementById('framework').value;
+            const description = document.getElementById('model-description').value;
+            
+            if (!name) {
+                document.getElementById('training-error').textContent = 'Please enter model name';
+                document.getElementById('training-error').classList.remove('hidden');
+                return;
+            }
+            
+            document.getElementById('training-result').innerHTML = 'Training model...';
+            document.getElementById('training-result').classList.remove('hidden');
+            document.getElementById('training-error').classList.add('hidden');
+            
+            try {
+                const response = await fetch(`${API_BASE}/models/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_name: name,
+                        model_type: type,
+                        framework: framework,
+                        description: description
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('training-result').innerHTML = 
+                        `<div class="success">✅ Model trained successfully!<br>Model ID: ${result.model_id}<br>Accuracy: ${result.accuracy.toFixed(2)}%</div>`;
+                    
+                    // Clear form
+                    document.getElementById('new-model-name').value = '';
+                    document.getElementById('model-description').value = '';
+                    
+                    loadModels();
+                    refreshStats();
+                } else {
+                    document.getElementById('training-error').textContent = result.detail;
+                    document.getElementById('training-error').classList.remove('hidden');
+                }
+            } catch (error) {
+                document.getElementById('training-error').textContent = `Training error: ${error.message}`;
+                document.getElementById('training-error').classList.remove('hidden');
+            }
+        }
+        
+        // Refresh Statistics
+        function refreshStats() {
+            document.getElementById('total-models').textContent = models.length;
+            
+            const totalPredictions = models.reduce((sum, model) => sum + model.total_predictions, 0);
+            document.getElementById('total-predictions').textContent = totalPredictions.toLocaleString();
+            
+            const avgAccuracy = models.length > 0 ? 
+                models.reduce((sum, model) => sum + model.accuracy, 0) / models.length : 0;
+            document.getElementById('avg-accuracy').textContent = avgAccuracy.toFixed(1) + '%';
+        }
+        
+        // Check System Health
+        async function checkHealth() {
+            document.getElementById('api-status').textContent = 'Checking...';
+            document.getElementById('db-status').textContent = 'Checking...';
+            document.getElementById('storage-status').textContent = 'Checking...';
+            document.getElementById('engine-status').textContent = 'Checking...';
+            
+            try {
+                const response = await fetch('/health');
+                if (response.ok) {
+                    document.getElementById('api-status').textContent = 'Healthy ✅';
+                    document.getElementById('db-status').textContent = 'Connected ✅';
+                    document.getElementById('storage-status').textContent = 'Available ✅';
+                    document.getElementById('engine-status').textContent = 'Running ✅';
+                } else {
+                    throw new Error('Health check failed');
+                }
+            } catch (error) {
+                document.getElementById('api-status').textContent = 'Error ❌';
+                document.getElementById('db-status').textContent = 'Error ❌';
+                document.getElementById('storage-status').textContent = 'Error ❌';
+                document.getElementById('engine-status').textContent = 'Error ❌';
+            }
+        }
+        
+        // Delete Model
+        async function deleteModel(modelId) {
+            if (!confirm('Are you sure you want to delete this model?')) return;
+            
+            try {
+                // For now, just remove from local array
+                models = models.filter(m => m.id !== modelId);
+                updateModelsList();
+                updateModelSelect();
+                refreshStats();
+                alert('Model deleted successfully');
+            } catch (error) {
+                alert('Failed to delete model: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

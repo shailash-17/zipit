@@ -501,7 +501,86 @@ async def oauth_callback(provider: str, request: Request, db: Session = Depends(
         # Redirect to login with error
         return RedirectResponse(url=f'/login?error={str(e)}', status_code=302)
 
-@app.post("/api/models/register")
+@app.post("/api/models/upload")
+async def upload_model(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    # Save uploaded model file
+    file_path = f"models/{file.filename}"
+    os.makedirs("models", exist_ok=True)
+    
+    with open(file_path, "wb") as buffer:
+        content = await file.read()
+        buffer.write(content)
+    
+    # Create model record
+    model = MLModel(
+        user_id=1,  # Default user for now
+        model_name=file.filename.split('.')[0],
+        model_type="uploaded",
+        framework="custom",
+        description=f"Uploaded model: {file.filename}",
+        model_data=file_path,
+        accuracy=0.0
+    )
+    db.add(model)
+    db.commit()
+    db.refresh(model)
+    
+    return {"message": "Model uploaded successfully", "model_id": model.id}
+
+@app.post("/api/models/{model_id}/predict")
+async def predict_uploaded(model_id: int, request: PredictionRequest, db: Session = Depends(get_db)):
+    model = db.query(MLModel).filter(MLModel.id == model_id).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    
+    try:
+        # Load model based on file extension
+        if model.model_data.endswith('.pkl'):
+            import pickle
+            with open(model.model_data, 'rb') as f:
+                ml_model = pickle.load(f)
+        elif model.model_data.endswith('.joblib'):
+            import joblib
+            ml_model = joblib.load(model.model_data)
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported model format")
+        
+        # Make prediction
+        features = np.array(request.features).reshape(1, -1)
+        prediction = ml_model.predict(features)[0]
+        
+        # Log prediction
+        log = PredictionLog(
+            model_id=model.id,
+            input_data=request.features,
+            prediction=float(prediction)
+        )
+        db.add(log)
+        model.total_predictions += 1
+        db.commit()
+        
+        return {
+            "prediction": float(prediction),
+            "model_name": model.model_name,
+            "model_id": model.id
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+
+@app.get("/api/models/all")
+async def get_all_models(db: Session = Depends(get_db)):
+    models = db.query(MLModel).filter(MLModel.is_active == True).all()
+    return [
+        {
+            "id": m.id,
+            "name": m.model_name,
+            "type": m.model_type,
+            "framework": m.framework,
+            "accuracy": round(m.accuracy * 100, 2) if m.accuracy else 0,
+            "total_predictions": m.total_predictions,
+            "created_at": m.created_at.isoformat()
+        } for m in models
+    ]
 async def register_model(model: ModelCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     existing = db.query(MLModel).filter(MLModel.user_id == current_user.id, MLModel.model_name == model.model_name).first()
     if existing:
@@ -646,7 +725,7 @@ async def login_page(request: Request):
 async def dashboard(request: Request):
     if templates_dir.exists():
         try:
-            return templates.TemplateResponse("working-dashboard.html", {"request": request})
+            return templates.TemplateResponse("real-dashboard.html", {"request": request})
         except:
             pass
     return HTMLResponse("<h1>ZipIt MLOps Dashboard</h1><p>API at <a href='/docs'>/docs</a></p>")
