@@ -798,6 +798,8 @@ async def get_all_models(db: Session = Depends(get_db)):
             "created_at": m.created_at.isoformat()
         } for m in models
     ]
+
+@app.get("/api/models/all")
 async def register_model(model: ModelCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     existing = db.query(MLModel).filter(MLModel.user_id == current_user.id, MLModel.model_name == model.model_name).first()
     if existing:
