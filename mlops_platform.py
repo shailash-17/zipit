@@ -360,6 +360,41 @@ def create_sample_model(model_type: str):
         accuracy = model.score(X, y)
         return model, accuracy
 
+from advanced_mlops import mlops_manager
+
+# Advanced MLOps API Endpoints
+@app.get("/api/mlops/integrations")
+async def get_mlops_integrations():
+    return mlops_manager.get_all_integrations()
+
+@app.post("/api/mlops/run-pipeline")
+async def run_mlops_pipeline(model_config: dict):
+    return mlops_manager.run_full_mlops_pipeline(model_config)
+
+@app.post("/api/mlops/drift-detection")
+async def detect_drift(reference_data: List[float], current_data: List[float]):
+    return mlops_manager.evidently.detect_drift(reference_data, current_data)
+
+@app.post("/api/mlops/hyperparameter-optimization")
+async def optimize_hyperparameters(model_type: str, n_trials: int = 100):
+    return mlops_manager.optuna.optimize_hyperparameters(model_type, n_trials)
+
+@app.post("/api/mlops/validate-data")
+async def validate_data(data: List[float], expectations: dict):
+    return mlops_manager.great_expectations.validate_data(data, expectations)
+
+@app.get("/api/mlops/features/{entity_id}")
+async def get_features(entity_id: str, feature_names: List[str]):
+    return mlops_manager.feast.get_features([entity_id], feature_names)
+
+@app.post("/api/mlops/distributed-training")
+async def distributed_training(model_config: dict):
+    return mlops_manager.ray.distributed_training(model_config)
+
+@app.post("/api/mlops/create-service")
+async def create_ml_service(model_name: str, model_path: str):
+    return mlops_manager.bentoml.create_service(model_name, model_path)
+
 # API Routes
 @app.get("/")
 async def root(request: Request):
