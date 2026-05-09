@@ -362,8 +362,8 @@ def create_sample_model(model_type: str):
 
 # API Routes
 @app.get("/")
-async def root():
-    return {"message": "ZipIt MLOps Platform", "status": "operational", "version": "1.0.0"}
+async def root(request: Request):
+    return RedirectResponse(url='/login', status_code=302)
 
 @app.get("/health")
 async def health_check():
